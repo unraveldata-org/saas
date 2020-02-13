@@ -1,7 +1,5 @@
-# Model
-`clm_schema.mwb` is a MySQL Workbench Model from the current schema.
+# Database Schema
 
-# Run
 ### Install MySQL 
 * MySQL 8.0.19: https://dev.mysql.com/doc/relnotes/mysql/8.0/en/news-8-0-19.html
 
@@ -13,7 +11,7 @@
 
 ### Create Schema and any DDL/DML Changes
 * `> ./create_db.sh`
-* Create DB user
+* That script will also create the user. E.g.,
 ```
 CREATE USER 'unravel'@'localhost' IDENTIFIED BY 'unraveldata';
 GRANT ALL PRIVILEGES ON clm.* TO 'unravel'@'localhost';

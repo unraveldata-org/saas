@@ -4,15 +4,17 @@
 * TODO: Marketing Dashboard
   * Integrates with marketing campaign to send emails
   * Monitor cluster activity (Prometheus or Datadog)
-  
-# Usage
-1. Start the Flask app, 
-```> ./start.sh```
 
+## Requirements
+1. Python 3.8 with virtual environment.
+
+```pip install -r requirements.txt```
+1. DB module installed
+
+## Usage
+1. Start the Flask app: ```> ./start.sh```
 Note: can also use PyCharm to launch app.py as a Python script which then allows debugging and setting breakpoints
 1. Navigate to http://127.0.0.1:5000
 
-
-# Design Docs
+## Design Docs
 * [Free Trial Offer for Cloud](https://docs.google.com/document/d/1OJgOstB0M2m-IvVR_hQJxOOY4P2D3BVHcoeR-4RiwQw)
-  

@@ -2,7 +2,7 @@
 import sys
 import os
 import json
-from datetime import datetime, timedelta
+from datetime import datetime
 import traceback
 import logging
 
@@ -24,12 +24,10 @@ from webapp.manager import Manager
 # Start of flask app, http://127.0.0.1:5000/
 app = Flask(__name__)
 
-# TODO, better logging
-#logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s : %(message)s")
 logger = logging.getLogger("WebApp")
 logger.setLevel(logging.INFO)
 
-# Console handler with a higher log level
+# Console handler
 ch = logging.StreamHandler()
 ch.setLevel(logging.INFO)
 
@@ -71,9 +69,7 @@ def index():
     return "Unravel SaaS"
 
 
-# http://127.0.0.1:5000/start_trial?first_name=Alejandro&last_name=Fernandez&company=Unravel&title=Engineer&email=alejandro@unraveldata.com&cloud_provider=EMR
-# http://127.0.0.1:5000/start_trial?first_name=Alejandro&last_name=Fernandez&company=Unravel&title=Engineer&email=alejandro@unraveldata.com&cloud_provider=EMR&send_email=true
-# http://127.0.0.1:5000/start_trial?first_name=Alejandro&last_name=Fernandez&company=Unravel&title=Engineer&email=alejandro@unraveldata.com&cloud_provider=EMR&send_email=False
+# E.g., http://127.0.0.1:5000/start_trial?first_name=Alejandro&last_name=Fernandez&company=Unravel&title=Engineer&email=alejandro@unraveldata.com&cloud_provider=EMR&send_email=true
 @app.route("/start_trial", methods=["GET", "POST"])
 @validate_params(
     Param("first_name", GET, str, required=True),
@@ -96,13 +92,15 @@ def start_trial(first_name, last_name, company, title, email, cloud_provider, se
     :param send_email: Whether to send an email after the cluster is created (bool)
     :return: Return a request id in order to track the progress.
     """
-    # TODO
-    ip = "127.0.0.1"
     response = {}
 
-    # TODO, utilize send_email
     try:
-        trial_request_id = manager.insert_trial_request(first_name, last_name, email, title, company, ip, cloud_provider)
+        headers_list = request.headers.getlist("X-Forwarded-For")
+        ip = headers_list[0] if headers_list else request.remote_addr
+
+        # This workflow will not create a cluster since the user has to bring their own.
+        trial_request_id = manager.insert_trial_request(first_name, last_name, email, title, company, ip,
+                                                        cloud_provider, create_cluster=False, send_email=send_email)
         response = {
             "request_id": trial_request_id
         }
@@ -111,11 +109,12 @@ def start_trial(first_name, last_name, company, title, email, cloud_provider, se
         tb = repr(traceback.extract_tb(exc_traceback))
         logger.error("Error: {}. Stack:\n{}".format(err, tb))
         response = {
-            "error": str(err)
+            "error": "Unable to start free trial. Error: {}".format(err)
         }
     return json.dumps(response)
 
 
+# E.g., http://127.0.0.1:5000/check_trial?request_id=1
 @app.route("/check_trial", methods=["GET"])
 @validate_params(
     Param("request_id", GET, int, required=True)
@@ -144,6 +143,10 @@ def check_trial(request_id):
                 "unravel_ip": "",
                 "expiration": str(datetime.utcnow())
             }
+        }
+    else:
+        response = {
+            "error": "Unable to find trial request with ID {}".format(request_id)
         }
     return json.dumps(response, default=str)
 #endregion
