@@ -54,13 +54,13 @@ class Manager(object):
         trials = TrialRequest.get_all_pending()
         return trials
 
-    def get_relevant_trials(self, lookback_days):
+    def get_relevant_trials(self, start_date):
         """
-        Get all currently active trials or created within the last lookback_days
+        Get all currently active trials or created after the start date.
+        :param start_date: Python DateTime object of the start date.
         :return: Return a list of TrialRequest objects.
         """
-        self.logger.info("Getting all relevant trials in the last {} days".format(lookback_days))
-        start_date = datetime.utcnow() - timedelta(days=lookback_days)
+        self.logger.info("Getting all relevant trials since {}".format(start_date))
         trials = TrialRequest.get_by_states_or_after_datetime([TrialRequest.State.PENDING], start_date)
         return trials
 

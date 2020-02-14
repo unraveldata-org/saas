@@ -5,3 +5,9 @@
     <li><a href="{{ url_for(endpoint) }}">{{name}}</a></li>
 {% endif %}
 {% endmacro %}
+
+{% macro dict_to_csv(val_dict) %}
+    {% for key, value in val_dict.items() %}
+        {{ key|capitalize }}: {{ value }}{{ "," if not loop.last }}
+    {% endfor %}
+{% endmacro %}

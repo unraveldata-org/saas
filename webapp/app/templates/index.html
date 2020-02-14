@@ -3,5 +3,21 @@
 {% block content %}
     <h1 class="section-title">Home</h1>
     <div class="content">
+        <p>
+            Trials:<br/>
+            Total active trials (pending, approved) = Node Specs launched by "free_trials".<br/>
+            Show current unique companies, unique users, and counts by cloud provider.<br/>
+            Timeseries of approved trial requests over the past 1-3 months.<br/>
+        </p>
+
+        <p>
+            Nodes:<br/>
+            Pie graph with counts per state (launched, ready, expired)<br/>
+            Timeseries with bar charts of requests and their current state. Historically, a lot of "deleted". Most recently, a lot of "ready".<br/><br/>
+
+            Lifetime:<br/>
+            Rolling avg of actual lifetime (date launched <-> date deleted).<br/>
+            Total time spent per state: launched to ready, ready to expired, expired to deleted.<br/>
+        </p>
     </div>
 {% endblock %}

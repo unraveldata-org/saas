@@ -1,7 +1,7 @@
 # Python standard library imports
 import sys
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 import traceback
 
 # Third-party imports
@@ -14,7 +14,7 @@ from flask import render_template
 from ..run import app
 from .util.rules import RuleEmail
 from . import manager
-
+from .helpers.constants import Conversion
 
 @app.route("/")
 def index():
@@ -24,7 +24,10 @@ def index():
 @app.route("/resources")
 def resources():
     nodes = manager.get_relevant_nodes()
-    return render_template("resources.html", nodes=nodes)
+    # Generate a dictionary from each state to the number of occurrences
+    states = [node.state for node in nodes]
+    state_counts = {s: states.count(s) for s in states}
+    return render_template("resources.html", nodes=nodes, state_counts=state_counts)
 
 
 @app.route("/request")
@@ -32,11 +35,27 @@ def request():
     return render_template("request.html")
 
 
-@app.route("/trials")
-def trials():
-    lookback_days = 7
-    trials = manager.get_relevant_trials(lookback_days)
-    return render_template("trials.html", trials=trials)
+@app.route("/trials", methods=["GET"])
+@validate_params(
+    Param("start_date_epoch_sec", GET, int, required=False, default=lambda: 0)
+)
+def trials(start_date_epoch_sec):
+    """
+    Get all active and relevant trials.
+    :param start_date_epoch_sec: Optional, start date in epoch secs.
+    :return: Render the trials.html page.
+    """
+    if start_date_epoch_sec > 0:
+        start_date = Conversion.unix_time_sec_to_dt(start_date_epoch_sec)
+    else:
+        start_date = datetime.utcnow() - timedelta(days=7)
+
+    trials = manager.get_relevant_trials(start_date)
+
+    # Generate a dictionary from each state to the number of occurrences
+    states = [trial.state for trial in trials]
+    state_counts = {s: states.count(s) for s in states}
+    return render_template("trials.html", start_date=start_date, trials=trials, state_counts=state_counts)
 
 
 @app.route("/health")

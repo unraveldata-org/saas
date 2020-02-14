@@ -1,21 +1,24 @@
 {% extends "base.html" %}
+{% from "macros.html" import dict_to_csv with context %}
 
 {% block content %}
     <h1 class="section-title">Trials</h1>
     <div class="content">
         <h4>Recent Trials</h4>
         {% if trials %}
-            <div>Total pending: _, approved: _, denied: _</div>
+            <div>Totals {{ dict_to_csv(state_counts) }}</div>
+            <div>Showing trials since: {{ start_date }}</div>
             <table class="table tables white-table">
                 <thead>
                     <tr>
+                        <th>Id</th>
                         <th>Company</th>
                         <th>Name</th>
                         <th>Email</th>
                         <th>Title</th>
                         <th>State</th>
                         <th>Cloud Provider</th>
-                        <th>Date</th>
+                        <th>Date Requested</th>
                         <th>Activity</th>
                         <th>Email Sent</th>
                         <th>Create Cluster</th>
@@ -24,6 +27,7 @@
                 <tbody>
                     {% for trial in trials %}
                         <tr>
+                            <td>{{ trial.id }}</td>
                             <td>{{ trial.company }}</td>
                             <td>{{ trial.first_name}} {{ trial.last_name }}</td>
                             <td>{{ trial.email }}</td>

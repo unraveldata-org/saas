@@ -72,6 +72,7 @@ header .nav li {
 
 header .nav li .active {
     font-weight: bold;
+    background-color: #e7f2f7;
 }
 
 header .nav li a {
@@ -188,4 +189,22 @@ table.white-table tbody tr {
 
 .tooltip:hover .tooltiptext {
   visibility: visible;
+}
+
+/* Resource buttons to extend and expire */
+.resource button {
+    vertical-align: top;
+    margin: 5px;
+}
+
+.resource button.extend {
+    background-color: #13f51354;
+    height: 32px;
+    font-size: 14px;
+}
+
+.resource button.expire {
+    background-color: #ec4b0e3b;
+    height: 20px;
+    font-size: 12px;
 }

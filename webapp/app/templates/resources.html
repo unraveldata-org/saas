@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros.html" import dict_to_csv with context %}
 
 {% block content %}
     <h1 class="section-title">Active Resources</h1>
@@ -6,12 +7,14 @@
 
         <h4>Active and Expired Nodes</h4>
         {% if nodes %}
-            <div>Total active: _, expired: _</div>
+            <div>Totals {{ dict_to_csv(state_counts) }}</div>
             <table class="table tables white-table">
                 <thead>
                     <tr>
+                        <th>Id</th>
                         <th>Launched By</th>
                         <th>Cloud Provider</th>
+                        <th>Region</th>
                         <th>IP</th>
                         <th>State</th>
                         <th>Node Type</th>
@@ -20,21 +23,61 @@
                         <th>Date Launched</th>
                         <th>Date Ready</th>
                         <th>Date Expired</th>
+                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for node in nodes %}
                         <tr>
-                            <td> node.node_spec.user </td>
+                            <td>{{ node.id }}</td>
+                            <td>root</td>
                             <td>{{ node.cloud_provider }}</td>
+                            <td>US West 2</td>
                             <td>{{ node.ip }}</td>
-                            <td>{{ node.state }}</td>
+                            <td>
+                                {% if node.state == "launched" %}
+                                    <span class="state_blue">{{ node.state }}</span>
+                                {% elif node.state == "ready" %}
+                                    <span class="state_green">{{ node.state }}</span>
+                                {% elif node.state == "expired" %}
+                                    <span class="state_orange">{{ node.state }}</span>
+                                {% elif node.state == "deleted" %}
+                                    <span class="state_red">{{ node.state }}</span>
+                                {% else %}
+                                    <span class="state_unknown">{{ node.state }}</span>
+                                {% endif %}
+                            </td>
                             <td>{{ node.node_type }}</td>
-                            <td> node.node_spec.unravel_version</td>
-                            <td> Box with Node Spec, including Storage, TTL, MySQL Version</td>
-                            <td>{{ node.date_launched }}</td>
-                            <td>{{ node.date_ready }}</td>
-                            <td>{{ node.date_expired }}</td>
+                            <td>4.5.5.0</td>
+                            <td>
+                                <div class="tooltip">Specs
+                                    <span class="tooltiptext">OS, JDK, Host CPU/RAM, Storage, MySQL Version, etc.</span>
+                                </div>
+
+                            </td>
+                            <td>
+                                {{ node.date_launched }}
+                            </td>
+                            <td>
+                                {% if node.state in ["ready", "expired", "deleted"] %}
+                                    {{ node.date_ready }}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if node.state in ["expired", "deleted"] %}
+                                    {{ node.date_expired }}
+                                {% else %}
+                                    expires in __ hours.
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if node.state in ["launched", "ready" ] %}
+                                    <div class="resource">
+                                        <button class="extend" type="button">Extend</button>
+                                        <button class="expire" type="button">Expire</button>
+                                    </div>
+                                {% endif %}
+                            </td>
                         </tr>
                     {% endfor %}
                 </tbody>
