@@ -206,6 +206,16 @@ class TrialRequest(Base):
         return trials
 
     @classmethod
+    def get_by_states_or_after_datetime(cls, states, date):
+        """
+        Get all TrialRequest objects whose state matches or whose start_date >= given date.
+        :param states: List of states (str)
+        :param date: Python DateTime object
+        :return: Return a list of TrialRequest objects, which could be an empty list.
+        """
+        return session.query(TrialRequest).filter(or_(TrialRequest.state.in_(states), TrialRequest.start_date >= date)).all()
+
+    @classmethod
     def get_by_id(cls, id):
         """
         Get a TrialRequest object given its id.

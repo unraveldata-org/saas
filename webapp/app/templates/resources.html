@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1 class="section-title">Active Resources</h1>
+    <div class="content">
+
+        <h4>Active and Expired Nodes</h4>
+        {% if nodes %}
+            <div>Total active: _, expired: _</div>
+            <table class="table tables white-table">
+                <thead>
+                    <tr>
+                        <th>Launched By</th>
+                        <th>Cloud Provider</th>
+                        <th>IP</th>
+                        <th>State</th>
+                        <th>Node Type</th>
+                        <th>Unravel Version</th>
+                        <th>Spec</th>
+                        <th>Date Launched</th>
+                        <th>Date Ready</th>
+                        <th>Date Expired</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for node in nodes %}
+                        <tr>
+                            <td> node.node_spec.user </td>
+                            <td>{{ node.cloud_provider }}</td>
+                            <td>{{ node.ip }}</td>
+                            <td>{{ node.state }}</td>
+                            <td>{{ node.node_type }}</td>
+                            <td> node.node_spec.unravel_version</td>
+                            <td> Box with Node Spec, including Storage, TTL, MySQL Version</td>
+                            <td>{{ node.date_launched }}</td>
+                            <td>{{ node.date_ready }}</td>
+                            <td>{{ node.date_expired }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            No active or expired Nodes
+        {% endif %}
+
+        <hr/>
+    </div>
+{% endblock %}

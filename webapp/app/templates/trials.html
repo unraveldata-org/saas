@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1 class="section-title">Trials</h1>
+    <div class="content">
+        <h4>Recent Trials</h4>
+        {% if trials %}
+            <div>Total pending: _, approved: _, denied: _</div>
+            <table class="table tables white-table">
+                <thead>
+                    <tr>
+                        <th>Company</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Title</th>
+                        <th>State</th>
+                        <th>Cloud Provider</th>
+                        <th>Date</th>
+                        <th>Activity</th>
+                        <th>Email Sent</th>
+                        <th>Create Cluster</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for trial in trials %}
+                        <tr>
+                            <td>{{ trial.company }}</td>
+                            <td>{{ trial.first_name}} {{ trial.last_name }}</td>
+                            <td>{{ trial.email }}</td>
+                            <td>{{ trial.title }}</td>
+                            <td>
+                                {% if trial.state == "pending" %}
+                                <span class="state_blue">{{ trial.state }}</span>
+                                {% elif trial.state == "approved" %}
+                                <span class="state_green">{{ trial.state }}</span>
+                                {% elif trial.state == "denied" %}
+                                <span class="state_red">{{ trial.state }}</span>
+                                {% else %}
+                                <span class="state_unknown">{{ trial.state }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ trial.cloud_provider }}</td>
+                            <td>{{ trial.start_date }}</td>
+                            <td>
+                                <div class="tooltip">Activity
+                                    <span class="tooltiptext">Activity indicator of health, last login, jobs submitted (per App Type), report types ran, etc.</span>
+                                </div>
+                            </td>
+                            <td>{% if trial.notify_customer %}
+                                    {{ trial.notify_customer }}
+                                {% endif %}
+                            </td>
+                            <td>{{ trial.create_cluster|yes_no }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            No active or recently created trials.
+        {% endif %}
+    </div>
+{% endblock %}

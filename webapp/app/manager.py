@@ -1,23 +1,22 @@
 # Python standard library imports
-import os
 import sys
+import os
+from datetime import datetime, timedelta
 import logging
 
 # Third-party imports
 
-
-root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Local imports
+root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(root_dir)
 
-# Local imports
-from db.models import DBRunner, TrialRequest
+from saas.db.models import DBRunner, TrialRequest, Node
 
 
 class Manager(object):
     """
     Manager that connects to the database.
     """
-
     logger = logging.getLogger("Manager")
     logger.setLevel(logging.INFO)
 
@@ -45,6 +44,34 @@ class Manager(object):
         DBRunner.DEBUG = False
         self.session, self.engine = DBRunner.setup_session(DBRunner.get_unravel_jdbc_url())
         self.logger.info("Connected to the DB successfully")
+
+    def get_active_trials(self):
+        """
+        Get all currently active trials.
+        :return: Return a list of TrialRequest objects.
+        """
+        self.logger.info("Getting all active trials")
+        trials = TrialRequest.get_all_pending()
+        return trials
+
+    def get_relevant_trials(self, lookback_days):
+        """
+        Get all currently active trials or created within the last lookback_days
+        :return: Return a list of TrialRequest objects.
+        """
+        self.logger.info("Getting all relevant trials in the last {} days".format(lookback_days))
+        start_date = datetime.utcnow() - timedelta(days=lookback_days)
+        trials = TrialRequest.get_by_states_or_after_datetime([TrialRequest.State.PENDING], start_date)
+        return trials
+
+    def get_relevant_nodes(self):
+        """
+        Get all active nodes
+        :return: Return a list of Node objects
+        """
+        self.logger.info("Getting all relevant nodes")
+        nodes = Node.get_by_states([Node.State.LAUNCHED, Node.State.READY, Node.State.EXPIRED])
+        return nodes
 
     def insert_trial_request(self, first_name, last_name, email, title, company, ip, cloud_provider,
                              create_cluster=False, send_email=False):

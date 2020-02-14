@@ -1,71 +1,47 @@
-# Python standard-library imports
+# Python standard library imports
 import sys
-import os
 import json
 from datetime import datetime
 import traceback
-import logging
 
-# Third Party imports (sorted alphabetically)
-# https://pypi.org/project/email-validator/
-from email_validator import validate_email, EmailNotValidError
-
-from flask import Flask, request, session, redirect, url_for, escape
-
+# Third-party imports
 # https://pypi.org/project/flask-request-validator/
-from flask_request_validator import (PATH, GET, Param, Enum, Pattern, validate_params, AbstractRule)
-
-root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(root_dir)
+from flask_request_validator import (PATH, GET, Param, Enum, Pattern, validate_params)
+from flask import request, session, redirect, url_for, escape
+from flask import render_template
 
 # Local imports
-from webapp.manager import Manager
-
-# Start of flask app, http://127.0.0.1:5000/
-app = Flask(__name__)
-
-logger = logging.getLogger("WebApp")
-logger.setLevel(logging.INFO)
-
-# Console handler
-ch = logging.StreamHandler()
-ch.setLevel(logging.INFO)
-
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-ch.setFormatter(formatter)
-
-logger.addHandler(ch)
+from ..run import app
+from .util.rules import RuleEmail
+from . import manager
 
 
-manager = Manager()
-
-#region Rules
-class RuleEmail(AbstractRule):
-    """
-    Flask Request Validator that ensures an email is properly constructed.
-    """
-
-    def validate(self, value):
-        """
-        Validate the email. Return a list of error messages.
-        :param value: Email value (str)
-        :return: Return a list of human-readable errors found.
-        """
-        errors = []
-
-        try:
-            v = validate_email(value)  # validate and get info
-            email = v["email"]  # replace with normalized form
-        except EmailNotValidError as e:
-            # email is not valid, exception message is human-readable
-            errors.append(str(e))
-
-        return errors
-#endregion
-
-#region Routes
 @app.route("/")
 def index():
+    return render_template("index.html")
+
+
+@app.route("/resources")
+def resources():
+    nodes = manager.get_relevant_nodes()
+    return render_template("resources.html", nodes=nodes)
+
+
+@app.route("/request")
+def request():
+    return render_template("request.html")
+
+
+@app.route("/trials")
+def trials():
+    lookback_days = 7
+    trials = manager.get_relevant_trials(lookback_days)
+    return render_template("trials.html", trials=trials)
+
+
+@app.route("/health")
+def health():
+    app.logger.info("Health Check")
     return "Unravel SaaS"
 
 
@@ -107,7 +83,7 @@ def start_trial(first_name, last_name, company, title, email, cloud_provider, se
     except Exception as err:
         exc_type, exc_value, exc_traceback = sys.exc_info()
         tb = repr(traceback.extract_tb(exc_traceback))
-        logger.error("Error: {}. Stack:\n{}".format(err, tb))
+        app.logger.error("Error: {}. Stack:\n{}".format(err, tb))
         response = {
             "error": "Unable to start free trial. Error: {}".format(err)
         }
@@ -149,8 +125,3 @@ def check_trial(request_id):
             "error": "Unable to find trial request with ID {}".format(request_id)
         }
     return json.dumps(response, default=str)
-#endregion
-
-
-if __name__ == "__main__":
-    app.run()

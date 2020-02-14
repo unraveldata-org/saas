@@ -12,7 +12,7 @@
 1. DB module installed
 
 ## Usage
-1. Start the Flask app: ```> ./start.sh```
+1. Start the Flask app: ```> ./start_dev.sh``` or ```> ./start_prod.sh```
 Note: can also use PyCharm to launch app.py as a Python script which then allows debugging and setting breakpoints
 1. Navigate to http://127.0.0.1:5000
 
