@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS `trial_request` (
   `company` VARCHAR(256) DEFAULT NULL,
   `ip` VARCHAR(32) DEFAULT NULL,
   `state` VARCHAR(32) NOT NULL,
+  `trial_type` VARCHAR(128) NOT NULL,
   `start_date` DATETIME NOT NULL,
   `cloud_provider` VARCHAR(128) NOT NULL,
   `create_cluster` BOOLEAN NOT NULL,
@@ -35,6 +36,7 @@ CREATE TABLE IF NOT EXISTS `trial_request` (
 CREATE TABLE IF NOT EXISTS `node_spec` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `cloud_provider` VARCHAR(128) NOT NULL,
+  `region` VARCHAR(256) NOT NULL,
   `state` VARCHAR(32) NOT NULL,
   `user` VARCHAR(64) NOT NULL,
   `node_type` VARCHAR(256) NOT NULL,
@@ -55,12 +57,15 @@ CREATE TABLE IF NOT EXISTS `node_spec` (
     ON UPDATE NO ACTION
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+
 -- -----------------------------------------------------
 -- Table `cluster_spec`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `cluster_spec` (
   `id` INT NOT NULL AUTO_INCREMENT,
+  `cluster_name` VARCHAR(128) NULL,
   `cloud_provider` VARCHAR(128) NOT NULL,
+  `region` VARCHAR(256) NOT NULL,
   `state` VARCHAR(32) NOT NULL,
   `user` VARCHAR(64) NOT NULL,
   `num_head_nodes` INT UNSIGNED NOT NULL,
@@ -68,11 +73,12 @@ CREATE TABLE IF NOT EXISTS `cluster_spec` (
   `num_worker_nodes` INT UNSIGNED NOT NULL,
   `worker_node_type` VARCHAR(256) NOT NULL,
   `os_family` VARCHAR(128) NULL,
-  `stack_version` VARCHAR(128) NULL,
-  `cluster_type` VARCHAR(128) NULL,
+  `stack_version` VARCHAR(128) NOT NULL,
+  `cluster_type` VARCHAR(128) NOT NULL,
   `jdk` VARCHAR(32) NULL,
   `storage` VARCHAR(1024) NULL,
   `services` TEXT NULL,
+  `bootstrap_action` TEXT NULL,
   `is_hdfs_ha` BOOLEAN NULL,
   `is_rm_ha` BOOLEAN NULL,
   `is_ssl` BOOLEAN NULL,
@@ -95,6 +101,7 @@ CREATE TABLE IF NOT EXISTS `cluster_spec` (
 CREATE TABLE IF NOT EXISTS `node` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `cloud_provider` VARCHAR(128) NOT NULL,
+  `region` VARCHAR(256) NOT NULL,
   `state` VARCHAR(32) NOT NULL,
   `node_type` VARCHAR(256) NOT NULL,
   `node_ip` VARCHAR(32) NULL,
@@ -118,8 +125,10 @@ CREATE TABLE IF NOT EXISTS `node` (
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `cluster` (
   `id` INT NOT NULL AUTO_INCREMENT,
+  `cluster_id` VARCHAR(256) NOT NULL,
+  `cluster_name` VARCHAR(256) NULL,
   `cloud_provider` VARCHAR(128) NOT NULL,
-  `cluster_name` VARCHAR(128) NOT NULL,
+  `region` VARCHAR(256) NOT NULL,
   `state` VARCHAR(32) NOT NULL,
   `config` TEXT,
   `ttl_hours` SMALLINT UNSIGNED NOT NULL,

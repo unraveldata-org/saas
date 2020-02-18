@@ -7,7 +7,7 @@
 
         <h4>Active and Expired Nodes</h4>
         {% if nodes %}
-            <div>Totals {{ dict_to_csv(state_counts) }}</div>
+            <div>Totals {{ dict_to_csv(node_state_counts) }}</div>
             <table class="table tables white-table">
                 <thead>
                     <tr>
@@ -30,9 +30,9 @@
                     {% for node in nodes %}
                         <tr>
                             <td>{{ node.id }}</td>
-                            <td>root</td>
+                            <td>{{ node.user }}</td>
                             <td>{{ node.cloud_provider }}</td>
-                            <td>US West 2</td>
+                            <td>{{ node.region }}</td>
                             <td>{{ node.ip }}</td>
                             <td>
                                 {% if node.state == "launched" %}
@@ -87,5 +87,83 @@
         {% endif %}
 
         <hr/>
+
+        <h4>Active and Expired Clusters</h4>
+        {% if clusters %}
+            <div>Totals {{ dict_to_csv(cluster_state_counts) }}</div>
+            <table class="table tables white-table">
+                <thead>
+                    <tr>
+                        <th>Id</th>
+                        <th>Launched By</th>
+                        <th>Cluster Id/Name</th>
+                        <th>Cloud Provider</th>
+                        <th>Region</th>
+                        <th>State</th>
+                        <th>Config</th>
+                        <th>Date Launched</th>
+                        <th>Date Ready</th>
+                        <th>Date Expired</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cluster in clusters %}
+                        <tr>
+                            <td>{{ cluster.id }}</td>
+                            <td>alejandro</td>
+                            <td>{{ cluster.cluster_id }}/{{ cluster.cluster_name }}</td>
+                            <td>{{ cluster.cloud_provider }}</td>
+                            <td>{{ cluster.region }}</td>
+                            <td>
+                                {% if cluster.state == "launched" %}
+                                    <span class="state_blue">{{ cluster.state }}</span>
+                                {% elif cluster.state == "ready" %}
+                                    <span class="state_green">{{ cluster.state }}</span>
+                                {% elif cluster.state == "expired" %}
+                                    <span class="state_orange">{{ cluster.state }}</span>
+                                {% elif cluster.state == "deleted" %}
+                                    <span class="state_red">{{ cluster.state }}</span>
+                                {% else %}
+                                    <span class="state_unknown">{{ cluster.state }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="tooltip">Config
+                                    <span class="tooltiptext">Num Head Node, VM Type, Num Worker Nodes, VM Type, HA, SSL, Kerberos</span>
+                                </div>
+
+                            </td>
+                            <td>
+                                {{ cluster.date_launched }}
+                            </td>
+                            <td>
+                                {% if cluster.state in ["ready", "expired", "deleted"] %}
+                                    {{ cluster.date_ready }}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if cluster.state in ["expired", "deleted"] %}
+                                    {{ cluster.date_expired }}
+                                {% else %}
+                                    expires in __ hours.
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if cluster.state in ["launched", "ready" ] %}
+                                    <div class="resource">
+                                        <button class="extend" type="button">Extend</button>
+                                        <button class="expire" type="button">Expire</button>
+                                    </div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            No active or expired Clusters
+        {% endif %}
+
     </div>
 {% endblock %}

@@ -10,7 +10,7 @@ import logging
 root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(root_dir)
 
-from saas.db.models import DBRunner, TrialRequest, Node
+from saas.db.models import DBRunner, TrialRequest, NodeSpec, Node, ClusterSpec, Cluster
 
 
 class Manager(object):
@@ -66,12 +66,52 @@ class Manager(object):
 
     def get_relevant_nodes(self):
         """
-        Get all active nodes
+        Get all active Nodes
         :return: Return a list of Node objects
         """
         self.logger.info("Getting all relevant nodes")
         nodes = Node.get_by_states([Node.State.LAUNCHED, Node.State.READY, Node.State.EXPIRED])
         return nodes
+
+    def get_relevant_clusters(self):
+        """
+        Get all active Clusters
+        :return: Return a list of Cluster objects
+        """
+        self.logger.info("Getting all relevant clusters")
+        clusters = Cluster.get_by_states([Node.State.LAUNCHED, Node.State.READY, Node.State.EXPIRED])
+        return clusters
+
+    def check_resource(self, type, object_id):
+        response = {
+            "status": None,
+            "cloud_provider": None, # obj property
+            "state": None,          # obj property
+            "date_requested": None, # obj property
+            "object_url": None,
+            "error_message": None
+        }
+
+        obj = None
+        if type == "cluster":
+            obj = ClusterSpec.get_by_id(object_id)
+        elif type == "node":
+            obj = NodeSpec.get_by_id(object_id)
+        else:
+            response["status"] = "error"
+            response["error_message"] = "Unsupported type: {}".format(type)
+            return response
+
+        if obj is None:
+            response["status"] = "error"
+            response["error_message"] = "Unable to find {} with id {}".format(type, object_id)
+        else:
+            response["status"] = "success"
+            response["cloud_provider"] = obj.get_cloud_provider()
+            response["state"] = obj.get_state()
+            response["date_requested"] = obj.get_date_requested()
+
+        return response
 
     def insert_trial_request(self, first_name, last_name, email, title, company, ip, cloud_provider,
                              create_cluster=False, send_email=False):
@@ -113,3 +153,55 @@ class Manager(object):
         """
         trial = TrialRequest.get_by_id(request_id)
         return trial
+
+    def insert_cluster_request(self, cloud_provider_name, region, stack_version, cluster_type, cluster_name,
+                               head_node_type, num_head_nodes, worker_node_type, num_worker_nodes, services):
+        """
+        # TODO
+        :param cloud_provider_name:
+        :param region:
+        :param stack_version:
+        :param cluster_type:
+        :param cluster_name:
+        :param head_node_type:
+        :param num_head_nodes:
+        :param worker_node_type:
+        :param num_worker_nodes:
+        :param services:
+        :return:
+        """
+        response = {"cluster_spec_id": None, "status": None, "error_message": None}
+
+        self.logger.info("Inserting a Cluster Request. cloud_provider_name: {}, region: {}, stack_version: {}, "
+                         "cluster_name: {}, head_node_type: {}, num_head_nodes:{}, worker_node_type: {}, num_worker_nodes: {}, "
+                         "services: {}".
+                         format(cloud_provider_name, region, stack_version, cluster_type, cluster_name,
+                                head_node_type, num_head_nodes, worker_node_type, num_worker_nodes, services))
+
+        user = "alejandro"
+        os_family = None
+        jdk = None
+        storage = None
+        bootstrap_action = None
+        is_hdfs_ha = is_rm_ha = is_ssl = is_kerberized = False
+        extra = None
+        ttl_hours = 72
+
+        try:
+            # TODO, change user, add cluster name, TTL hours,
+            cluster_spec = ClusterSpec.create_if_not_exists(cluster_name, cloud_provider_name, region, user,
+                                                            num_head_nodes, head_node_type, num_worker_nodes, worker_node_type,
+                                                            os_family, stack_version, cluster_type, jdk,
+                                                            storage, services, bootstrap_action,
+                                                            is_hdfs_ha, is_rm_ha, is_ssl, is_kerberized,
+                                                            extra, ttl_hours, None)
+            cluster_spec.save()
+            self.session.commit()
+            response["status"] = "success"
+            response["cluster_spec_id"] = cluster_spec.id
+        except Exception as err:
+            self.logger.error("Unable to insert cluster_spec. Error: {}".format(err))
+            response["status"] = "error"
+            response["error_message"] = "Unable to create a ClusterSpec request. Check the logs for more details."
+
+        return response

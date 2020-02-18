@@ -1,8 +1,256 @@
 {% extends "base.html" %}
 
+{% block scripts %}
+<script type="text/javascript">
+
+    function add_pie_chart(chart_info, id_num, section) {
+        // Container to insert another chart into
+        var container = $("div#charts_" + section);
+
+        // Unique ID for the new chart
+        var chart_id = "chart_" + section + "_" + id_num;
+
+        // TODO, make robust with default values if doesn't exist
+        var title = chart_info["title"];
+        // The description cannot contain any HTML chars
+        var description = chart_info["description"];
+        var series_name = chart_info["series_name"];
+        var legend = chart_info["legend"];
+
+        container.append("<figure class='highcharts-figure'><div id='" + chart_id + "'></div>" +
+        "<p class='highcharts-description'>" + description + "</p>"
+        );
+
+        // Populate this with name, y, and color
+        var series_data = new Array();
+
+        // State to count
+        var data_dict = chart_info["data"];
+
+        for (var key in data_dict) {
+            var slice = {
+                name: key,
+                y: data_dict[key],
+                color: legend[key]["color"]
+            }
+            series_data.push(slice);
+        }
+
+        Highcharts.chart(chart_id, {
+            chart: {
+                plotBackgroundColor: null,
+                plotBorderWidth: null,
+                plotShadow: false,
+                type: "pie"
+            },
+            title: {
+                text: title
+            },
+            tooltip: {
+                pointFormat: "{series.name}: <b>{point.percentage:.1f}%</b>"
+            },
+            accessibility: {
+                point: {
+                    valueSuffix: "%"
+                }
+            },
+            plotOptions: {
+                pie: {
+                    allowPointSelect: true,
+                    cursor: "pointer",
+                    dataLabels: {
+                        enabled: true,
+                        format: "<b>{point.name}</b>: {point.percentage:.1f} %"
+                    }
+                }
+            },
+            series: [{
+                name: series_name,
+                colorByPoint: true,
+                data: series_data
+            }]
+        });
+    }
+
+    function add_solidgauge_chart(chart_info, id_num, section) {
+        // Container to insert another chart into
+        var container = $("div#charts_" + section);
+
+        // Unique ID for the new chart
+        var chart_id = "node_chart_" + id_num;
+
+        // TODO, make robust with default values if doesn't exist
+        var title = chart_info["title"];
+        // The description cannot contain any HTML chars
+        var description = chart_info["description"];
+        var series_name = chart_info["series_name"];
+
+        // Should be dictionary with min, center, max. Right now, we only support 3 stops.
+        var legend = chart_info["legend"];
+        var min_color = legend["min_color"];
+        var center_color = legend["center_color"];
+        var max_color = legend["max_color"];
+
+
+        var min_val = chart_info["data"]["min"];
+        var value = chart_info["data"]["value"];
+        var max_val = chart_info["data"]["max"];
+
+        var series_data = new Array();
+        series_data.push(value);
+
+        container.append("<figure class='highcharts-figure'>" +
+            "<div id='container-speed' class='chart-container'></div>" +
+            "<div id='" + chart_id + "'></div>" +
+            "<p class='highcharts-description'>" + description + "</p>"
+        );
+
+        var gaugeOptions = {
+            chart: {
+                type: "solidgauge"
+            },
+            title: title,
+            pane: {
+                center: ["50%", "85%"], // center inside of the figure
+                size: "100%",
+                startAngle: -90,
+                endAngle: 90,
+                background: {
+                    backgroundColor: Highcharts.defaultOptions.legend.backgroundColor || "#EEE", // background color in white
+                    innerRadius: "60%",
+                    outerRadius: "100%",
+                    shape: "arc"
+                }
+            },
+            exporting: {
+                enabled: false
+            },
+
+            // the value axis
+            yAxis: {
+                stops: [
+                    [0.1, min_color],
+                    [0.5, center_color],
+                    [0.9, max_color]
+                ],
+                lineWidth: 0,
+                tickWidth: 0,
+                minorTickInterval: null,
+                tickAmount: 2,
+                title: {
+                    y: -70
+                },
+                labels: {
+                    y: 16
+                }
+            },
+
+            plotOptions: {
+                solidgauge: {
+                    dataLabels: {
+                        y: 5,
+                        borderWidth: 0,
+                        useHTML: true
+                    }
+                }
+            }
+        };
+
+        // The speed gauge
+        var chartSpeed = Highcharts.chart("container-speed", Highcharts.merge(gaugeOptions, {
+            yAxis: {
+                min: min_val,
+                max: max_val,
+                title: {
+                    text: series_name
+                }
+            },
+            series: [{
+                name: series_name,
+                data: series_data
+            }]
+
+        }));
+    }
+
+    $(document).ready(function () {
+        var dashboards_json_text = $("#dashboards_json").val();
+        var dashboards_obj = typeof dashboards_json_text != "object" ? JSON.parse(dashboards_json_text) : dashboards_json_text;
+
+        if ("Dashboards" in dashboards_obj) {
+            var chart_id = 0;
+
+            dashboards_obj["Dashboards"].forEach(chart_info => {
+                chart_id++;
+
+                var chart_section = chart_info["section"];
+                var chart_type = chart_info["type"];
+
+                switch (chart_type) {
+                    case "pie":
+                        add_pie_chart(chart_info, chart_id, chart_section);
+                        break;
+                    case "solidgauge":
+                        add_solidgauge_chart(chart_info, chart_id, chart_section);
+                        break;
+                    default:
+                        console.error("Unsupported chart type ", chart_type);
+                        break;
+                }
+            });
+        } else {
+            console.warn("Did not find a Dashboards key for the dashboard info.");
+        }
+
+    });
+</script>
+{% endblock %}
+
 {% block content %}
     <h1 class="section-title">Home</h1>
     <div class="content">
+        <div>
+            <!-- Container to automatically add charts using jQuery -->
+            <div id="charts_trial">
+                <div class="title">Trials</div>
+                <!--
+                <figure class="highcharts-figure">
+                <div id="nodes_count_pie"></div>
+                <p class="highcharts-description">Pie charts are very popular for showing a compact overview.
+                </p>
+                </figure>
+                -->
+            </div>
+
+            <div style="clear: both;"/>
+            <hr/>
+
+            <div id="charts_node">
+                <div class="title">Nodes</div>
+                <!--
+                <figure class="highcharts-figure">
+                <div id="nodes_count_pie"></div>
+                <p class="highcharts-description">Pie charts are very popular for showing a compact overview.
+                </p>
+                </figure>
+                -->
+            </div>
+            <div style="clear: both;"/>
+            <hr/>
+
+            <div id="charts_cluster">
+                <div class="title">Clusters</div>
+                <!--
+                <figure class="highcharts-figure">
+                <div id="nodes_count_pie"></div>
+                <p class="highcharts-description">Pie charts are very popular for showing a compact overview.
+                </p>
+                </figure>
+                -->
+            </div>
+        </div>
+        <div style="clear: both;"/>
+        <hr/>
         <p>
             Trials:<br/>
             Total active trials (pending, approved) = Node Specs launched by "free_trials".<br/>
@@ -10,6 +258,7 @@
             Timeseries of approved trial requests over the past 1-3 months.<br/>
         </p>
 
+        <div style="clear: both;"/>
         <p>
             Nodes:<br/>
             Pie graph with counts per state (launched, ready, expired)<br/>
@@ -19,5 +268,12 @@
             Rolling avg of actual lifetime (date launched <-> date deleted).<br/>
             Total time spent per state: launched to ready, ready to expired, expired to deleted.<br/>
         </p>
+
+        <!-- Store the JSON object in the DOM so we jQuery can convert it from text to JSON and process charts with it. -->
+        <div style="visibility: hidden;">
+            <input type="hidden" id="dashboards_json" value="{{ dashboard_json }}" />
+        </div>
+
+
     </div>
 {% endblock %}

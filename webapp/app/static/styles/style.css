@@ -208,3 +208,24 @@ table.white-table tbody tr {
     height: 20px;
     font-size: 12px;
 }
+
+form.hidden input {
+    visibility: hidden;
+}
+
+div.error_message {
+    width: 100px;
+    margin: 5px;
+    padding: 5px;
+    border: 2px solid #f56b6b;
+    background-color: #ffd5d5;
+    border-radius: 5px;
+}
+
+a.toggle_debug {
+    position: absolute;
+    margin: 10px;
+    z-index: 1000;
+    top: 90px;
+    right: 30px;
+}

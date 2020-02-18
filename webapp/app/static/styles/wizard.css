@@ -1,0 +1,42 @@
+/* Custom CSS on top of smart_wizard.css */
+
+.wizard label {
+    margin-right: 50px;
+}
+
+.wizard select {
+    margin-bottom: 40px;
+}
+
+.wizard select {
+    margin-bottom: 40px;
+}
+
+.wizard select.mono {
+    font-family: monospace;
+}
+
+.wizard .box {
+    float: left;
+    border: 1px dotted gray;
+    padding: 5px;
+    min-height: 100px;
+    height: 100px;
+    margin-top: 15px;
+    margin-right: 5px;
+}
+
+.wizard .box legend {
+    font-size: 1.2em;
+    width: fit-content;
+    position: relative;
+    top: -35px;
+    padding: 15px;
+    background-color: white;
+}
+
+.wizard .box label {
+    margin-right: 20px;
+}
+
+

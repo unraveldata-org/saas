@@ -7,6 +7,15 @@
             <title>Unravel Cluster Lifecycle and Trial Manager</title>
         {% endif %}
         <link rel=stylesheet type=text/css href="{{ url_for('static', filename='styles/style.css') }}">
+        <link rel=stylesheet type=text/css href="{{ url_for('static', filename='styles/charts.css') }}">
+
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+        <script src="https://code.highcharts.com/highcharts.js"></script>
+        <script src="https://code.highcharts.com/highcharts-more.js"></script>
+        <script src="https://code.highcharts.com/modules/solid-gauge.js"></script>
+        <script src="https://code.highcharts.com/modules/exporting.js"></script>
+        <script src="https://code.highcharts.com/modules/export-data.js"></script>
+        {% block scripts %}{% endblock %}
     </head>
     <body>
         <header>
@@ -20,7 +29,7 @@
                     <div class="nav">
                         <ul>
                             {{ nav_link('resources', 'Resources') }}
-                            {{ nav_link('request', 'Request') }}
+                            {{ nav_link('provision', 'Provision') }}
                             {{ nav_link('trials', 'Trials') }}
                         </ul>
                     </div>

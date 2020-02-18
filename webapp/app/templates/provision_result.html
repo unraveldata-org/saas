@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block scripts %}
+{% endblock %}
+
+{% block content %}
+    <h1 class="section-title">Provision Resource</h1>
+    <div class="content">
+        <strong>Status:</strong> <span class="status">{{ status }}</span><br/>
+        {% if error_message %}
+            <div class="error_message">{{ error_message }}</div>
+        {% endif %}
+
+        <table class="white-table">
+            <thead>
+                <tr>
+                    <th>Property</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Resource Type</td>
+                    <td>{{ type }}</td>
+                </tr>
+                <tr>
+                    <td>ID</td>
+                    <td><a href="/check_request?type={{ type}}&id={{ object_id}}">{{ object_id }}</a>
+                    </td>
+                </tr>
+                <tr>
+                    <td>State</td>
+                    <td>{{ object_state }}</td>
+                </tr>
+                <tr>
+                    <td>Cloud Provider</td>
+                    <td>{{ object_cloud_provider }}</td>
+                </tr>
+                <tr>
+                    <td>Date Requested</td>
+                    <td>{{ object_date_requested }}</td>
+                </tr>
+            </tbody>
+
+        </table>
+    </div>
+{% endblock %}

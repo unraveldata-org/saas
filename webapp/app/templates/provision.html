@@ -1,0 +1,673 @@
+{% extends "base.html" %}
+
+{% block scripts %}
+<link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles/smart_wizard.css') }}">
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles/wizard.css') }}">
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles/bootstrap_slider.css') }}">
+
+<script src="{{ url_for('static', filename='js/jquery.smartWizard.js') }}"></script>
+<script src="{{ url_for('static', filename='js/jquery.bootstrap.slider.js') }}"></script>
+
+<script type="text/javascript">
+
+    /**
+     * Toggle the visibility of every input text
+     */
+    function toggleDebug() {
+        $('form#create_cluster').find('*').each(function(){
+            $(this).toggle();
+        });
+    }
+
+    function prepareForm() {
+        // TODO, similar logic is repeated in showSummary()
+
+        // Get all of the values from create_cluster_wizard, and populate them in create_cluster as appropriate.
+        var cloud_provider = $('form#create_cluster_wizard input[name="cloud_provider"]:checked').val();
+        cloud_provider = cloud_provider.toLowerCase();
+
+        var region = $('select[name="' + "region_" + cloud_provider.toLowerCase() + '"]').val();
+        var stack_version = $('input[name="' + "stack_version_" + cloud_provider + '"]').val();
+
+        var cluster_type = $('select[name="' + "cluster_type_" + cloud_provider.toLowerCase() + '"]').val();
+
+        // Must append the cluster name suffix to the desired prefix
+        var cluster_name_suffix = $('input[name="cluster_name_suffix"]').val();
+        var cluster_name = $('input[name="' + "cluster_name_" + cloud_provider + '"]').val();
+        cluster_name = cluster_name + cluster_name_suffix;
+
+        var head_node_type = $('select[name="' + "head_node_type_" + cloud_provider + '"]').val();
+        var num_head_nodes = $('input[name="' + "num_head_nodes_" + cloud_provider + '"]').val();
+
+        var worker_node_type = $('select[name="' + "worker_node_type_" + cloud_provider + '"]').val();
+        var num_worker_nodes = $('input[name="' + "num_worker_nodes_" + cloud_provider + '"]').val();
+
+        var services_list = Array();
+        $("input[name='services_" + cloud_provider + "']:checked").each(function(index, elem ) {
+            services_list.push($(this).attr("value"));
+        });
+        // Notice that there is no space here
+        var services = services_list.join(",");
+
+        //alert("Cloud Provider: " + cloud_provider + ", region: " + curr_region + ", stack version: " + curr_stack_version);
+
+        $('form#create_cluster input[name="cloud_provider"]').val(cloud_provider.toUpperCase());
+        $('form#create_cluster input[name="region"]').val(region);
+        $('form#create_cluster input[name="stack_version"]').val(stack_version);
+        $('form#create_cluster input[name="cluster_type"]').val(cluster_type);
+        $('form#create_cluster input[name="cluster_name"]').val(cluster_name);
+        $('form#create_cluster input[name="head_node_type"]').val(head_node_type);
+        $('form#create_cluster input[name="num_head_nodes"]').val(num_head_nodes);
+        $('form#create_cluster input[name="worker_node_type"]').val(worker_node_type);
+        $('form#create_cluster input[name="num_worker_nodes"]').val(num_worker_nodes);
+        $('form#create_cluster input[name="services"]').val(services);
+
+        // Submit the final form separately. $("form#create_cluster").submit();
+    }
+
+    function showButtonWithClass(name) {
+        $("button." + name).each(function (index, elem) {
+            $(this).show();
+        });
+    }
+
+    function hideButtonWithClass(name) {
+        $("button." + name).each(function (index, elem) {
+            $(this).hide();
+        });
+    }
+
+    function handleCloudProvider() {
+        //alert("Inside handleCloudProvider");
+        var cloud_provider = $('form#create_cluster_wizard input[name="cloud_provider"]:checked').val();
+        //alert("Selected cloud provider " + cloud_provider + ", so hide all others.");
+        if (cloud_provider != undefined) {
+            $("div.for_cloud_provider").each(function (index, elem) {
+                // If elem classes contains "for_$cloud_provider" then exclude it.
+                // Hide it, Otherwise, show it.
+                var elem_id = $(this).attr("id");
+                var show = elem_id.includes(cloud_provider);
+
+                //alert("Analyzing elem with id " + elem_id + " which has show = " + show);
+                if (show) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+
+            });
+        } else {
+            //alert("Oops, shouldn't reach here");
+        }
+    }
+
+    /**
+     * Prevent non-AlphaNumeric cluster names.
+     */
+    function allowAlphaNumericOnly() {
+        // This still allows copy-paste with invalid values
+        $('input.alpha_numeric_only').keypress(function (e) {
+            var keyCode = e.keyCode || e.which;
+
+            //Regex for Valid Characters i.e. Alphabets and Numbers.
+            var regex = /^[A-Za-z0-9]+$/;
+
+            //Validate TextBox value against the Regex.
+            var isValid = regex.test(String.fromCharCode(keyCode));
+            return isValid;
+        });
+    }
+
+    /**
+     * In order to submit the hidden form, but prevent the Wizard Form from actually being submitted
+     * when its Finished button is clicked.
+     */
+    function preventDummyFormSubmit() {
+        $("form#create_cluster_wizard").submit(function (e) {
+            //stop submitting the form to see the disabled button effect
+            e.preventDefault();
+        });
+    }
+
+    /**
+     * Currently only done for EMR.
+     * Set the sliders for the number of Head Nodes and number of Worker Nodes.
+     * HDI and EMR each have different settings.
+     */
+    function showSliders() {
+        // https://github.com/seiyria/bootstrap-slider
+        // TODO, for some reason the tooltip didn't actually show, so I had to us a custom span tag
+        // and then set its value.
+        $("#num_head_nodes_emr").slider({
+            tooltip: 'always',
+            tooltip_position: 'bottom'
+        });
+        // For this specific slider, determine which span gets the value update.
+        // TODO, the slider has an odd behavior where clicking on the circle can move it somewhere
+        // but the value will not be reflected.
+        $("#num_head_nodes_emr").on("slide", function(slideEvt) {
+            $("#num_head_nodes_emr_slider_val").text(slideEvt.value);
+        });
+
+        $("#num_worker_nodes_emr").slider({
+            tooltip: 'always',
+            tooltip_position: 'bottom',
+            ticks: [1, 3, 6, 9, 12, 24],
+            ticks_positions: [0, 12, 25, 37, 50, 100],
+            ticks_labels: ['1', '3', '6', '9', '12', '24'],
+            ticks_snap_bounds: 30
+        });
+
+        // For this specific slider, determine which span gets the value update.
+        // TODO, the slider has an odd behavior where clicking on the circle can move it somewhere
+        // but the value will not be reflected.
+        $("#num_worker_nodes_emr").on("slide", function(slideEvt) {
+            $("#num_worker_nodes_emr_slider_val").text(slideEvt.value);
+        });
+    }
+
+    /**
+     * In the last Wizard Step, show a summary of the data about to be submitted.
+     */
+    function showSummary() {
+        // Remove all rows and regenerate them
+        $("table#summary tbody tr").remove();
+
+        var data = Array();
+        var cloud_provider = $('form#create_cluster_wizard input[name="cloud_provider"]:checked').val();
+        data.push(["Cloud Provider", cloud_provider.toUpperCase()]);
+
+        cloud_provider = cloud_provider.toLowerCase();
+        var region = $('select[name="' + "region_" + cloud_provider + '"]').val();
+        var stack_version = $('input[name="' + "stack_version_" + cloud_provider + '"]').val();
+        var cluster_type = $('select[name="' + "cluster_type_" + cloud_provider + '"]').val();
+
+        // Must append the cluster name suffix to the desired prefix
+        var cluster_name_suffix = $('input[name="cluster_name_suffix"]').val();
+        var cluster_name = $('input[name="' + "cluster_name_" + cloud_provider + '"]').val();
+        cluster_name = cluster_name + cluster_name_suffix;
+
+        var head_node_type = $('select[name="' + "head_node_type_" + cloud_provider + '"]').val();
+        var num_head_nodes = $('input[name="' + "num_head_nodes_" + cloud_provider + '"]').val();
+
+        var worker_node_type = $('select[name="' + "worker_node_type_" + cloud_provider + '"]').val();
+        var num_worker_nodes = $('input[name="' + "num_worker_nodes_" + cloud_provider + '"]').val();
+
+        var services_list = Array();
+        $("input[name='services_" + cloud_provider + "']:checked").each(function(index, elem ) {
+            services_list.push($(this).attr("value"));
+        });
+        // Notice that here we use a space as well.
+        var services = services_list.join(", ");
+
+        data.push(["Region", region]);
+        data.push(["Stack Version", stack_version]);
+        data.push(["Cluster Type", cluster_type]);
+        data.push(["Cluster Name", cluster_name]);
+        data.push(["Head Node Type", head_node_type]);
+        data.push(["Num Head Nodes", num_head_nodes]);
+        data.push(["Worker Node Type", worker_node_type]);
+        data.push(["Num Worker Nodes", num_worker_nodes]);
+        data.push(["services", services]);
+
+        data.forEach(function(element) {
+          $('table#summary tr:last').after('<tr><td>' + element[0] + '</td><td>' + element[1] + '</td></tr>');
+        });
+
+        // Also prepare the form so we can toggle it and see its values while debugging.
+        prepareForm();
+    }
+
+    function makeWizard() {
+        // http://techlaboratory.net/smartwizard/documentation
+        // http://techlaboratory.net/demos/SmartWizard43/examples/index.html
+        // Step show event
+        $("#smartwizard").on("showStep", function(e, anchorObject, stepNumber, stepDirection, stepPosition) {
+            //alert("You are on step "+ stepNumber + " now");
+
+            hideButtonWithClass("btn-finish");
+
+            if (stepPosition === 'first'){
+
+                $("#prev-btn").addClass('disabled');
+            } else if(stepPosition === 'final'){
+                showSummary();
+                $("#next-btn").addClass('disabled');
+                showButtonWithClass("btn-finish");
+            } else{
+                $("#prev-btn").removeClass('disabled');
+                $("#next-btn").removeClass('disabled');
+            }
+        });
+
+        $("#smartwizard").on("leaveStep", function(e, anchorObject, stepNumber, stepDirection, stepPosition) {
+            //alert("You are leaving step "+ stepNumber + " now");
+            // Cannot leave until a Cloud Provider is picked.
+            if (stepNumber == 0) {
+                var cloud_provider = $('form#create_cluster_wizard input[name="cloud_provider"]:checked').val();
+                if (cloud_provider == undefined) {
+                    //alert("Must pick a Cloud Provider before going to step 2.");
+                    return false;
+                }
+            }
+            if (stepNumber == 1) {
+                var cloud_provider = $('form#create_cluster_wizard input[name="cloud_provider"]:checked').val();
+                cloud_provider = cloud_provider.toLowerCase();
+
+                var region = $('select[name="' + "region_" + cloud_provider + '"]').val();
+                var stack_version = $('input[name="' + "stack_version_" + cloud_provider + '"]').val();
+
+                var cluster_name = $('input[name="' + "cluster_name_" + cloud_provider + '"]').val();
+                cluster_name = cluster_name != undefined ? cluster_name.trim() : "";
+
+                if (region == undefined || stack_version == undefined || cluster_name == undefined || cluster_name == "") {
+                    alert("Missing region, stack version, or cluster name");
+                    // TODO, display a better error message depending on what is missing
+                    return false;
+                }
+            }
+
+
+
+            return true;
+        });
+
+        $("#smartwizard").on("beginReset", function(e) {
+            return confirm("Do you want to reset the wizard?");
+        });
+
+        // Toolbar extra buttons
+        var btnFinish = $('<button></button>').text('Finish')
+                                     .addClass('btn btn-info btn-finish')
+                                     .on('click', function(){
+                                         prepareForm();
+                                         $("form#create_cluster").submit();
+                                     });
+        var btnReset = $('<button></button>').text('Reset')
+                                     .addClass('btn btn-danger btn-reset')
+                                     .on('click', function(){
+                                        $('#smartwizard').smartWizard("reset");
+                                     });
+
+        // Smart Wizard
+        $('#smartwizard').smartWizard({
+                selected: 0,
+                keyNavigation: false,
+                theme: 'default',
+                transitionEffect:'fade',
+                useURLhash: false,
+                showStepURLhash: true,
+                toolbarSettings: {toolbarPosition: 'bottom',    // none, top, bottom
+                                  toolbarButtonPosition: 'end', // left, right,
+                                  showNextButton: true,
+                                  showPreviousButton: true,
+                                  toolbarExtraButtons: [btnFinish, btnReset]
+                                }
+        });
+
+
+        // Initially hide the finish button.
+        hideButtonWithClass("btn-finish");
+
+        // External Button Events
+        $("#reset-btn").on("click", function() {
+            // Reset wizard
+            $('#smartwizard').smartWizard("reset");
+            return true;
+        });
+
+        $("#prev-btn").on("click", function() {
+            // Navigate previous
+            $('#smartwizard').smartWizard("prev");
+            return true;
+        });
+
+        $("#next-btn").on("click", function() {
+            // Navigate next
+            $('#smartwizard').smartWizard("next");
+            return true;
+        });
+    }
+
+    $(document).ready(function () {
+        // http://vinceg.github.io/twitter-bootstrap-wizard/examples/basic-progressbar.html#
+        // Not using this one ^^^
+
+        // Register this function to show only details for the active Cloud Provider
+        $('input[name="cloud_provider"]').change(function() {
+            handleCloudProvider();
+        });
+
+        // Initially, hide containers of all Cloud Providers until the user picks one.
+        $('div.for_cloud_provider').each(function(index, elem ) {
+            $(this).hide();
+        });
+
+        // Hide every element in our hidden form.
+        toggleDebug();
+
+        allowAlphaNumericOnly();
+        showSliders();
+        makeWizard();
+        preventDummyFormSubmit();
+    });
+
+
+</script>
+{% endblock %}
+
+{% block content %}
+    <h1 class="section-title">Request a Resource</h1>
+    <div class="content">
+        <h4>Create a Cluster</h4>
+        <a href="javascript:toggleDebug();" class="toggle_debug">Toggle Debug</a>
+        <hr/>
+            <!-- http://vinceg.github.io/twitter-bootstrap-wizard/examples/basic-progressbar.html# -->
+
+        <!-- This is the actual form that is submitted after all of the elements have been processed
+        and is a bit easier to submit. -->
+        <form id="create_cluster" action="/create_cluster">
+            <!-- These should all be hidden. -->
+            <input type="text" name="cloud_provider"   value="" placeholder="cloud_provider">
+            <input type="text" name="region"           value="" placeholder="region">
+            <input type="text" name="cluster_type"     value="" placeholder="cluster_type">
+            <input type="text" name="stack_version"    value="" placeholder="stack_version">
+            <!-- The value of this will be appended to the cluster_name once this hidden form is submitted. -->
+            <input type="text" name="cluster_name_suffix"  value="{{ cluster_name_suffix }}" placeholder="cluster_name_suffix">
+            <input type="text" name="cluster_name"     value="" placeholder="cluster_name">
+
+            <input type="text" name="head_node_type"   value="" placeholder="head_node_type">
+            <input type="text" name="num_head_nodes"   value="" placeholder="num_head_nodes">
+            <input type="text" name="worker_node_type" value="" placeholder="worker_node_type">
+            <input type="text" name="num_worker_nodes" value="" placeholder="num_worker_nodes">
+            <br/>
+            <!-- Will be a comma-delimited list. -->
+            <input type="text" name="services"         value="" placeholder="services">
+        </form>
+
+        <form id="create_cluster_wizard" action="#">
+            <div id="smartwizard">
+                <ul>
+                    <li><a href="#step-1">Cloud Provider<br /><small>Pick a Cloud Provider</small></a></li>
+                    <li><a href="#step-2">Core<br /><small>Region, Stack, VM types and counts</small></a></li>
+                    <li><a href="#step-3">Services<br /><small>Services</small></a></li>
+                    <li><a href="#step-4">Add-Ons<br /><small>Add-on features like High Availability, Security, etc.</small></a></li>
+                    <li><a href="#step-5">Confirmation<br /><small>Review all of your settings</small></a></li>
+                </ul>
+
+                <div>
+                    <div id="step-1" class="wizard">
+                        <h4 class="border-bottom border-gray pb-2">Pick a Cloud Provider</span></h4>
+                        <fieldset>
+                            <input type="radio" name="cloud_provider" id="cp_emr" value="EMR">
+                            <label for="cp_emr">Amazon EMR</label>
+
+                            <input type="radio" name="cloud_provider" id="cp_hdi" value="HDI">
+                            <label for="cp_hdi">Azure HDInsight</label>
+
+                            <input type="radio" name="cloud_provider" id="cp_dataproc" value="DATAPROC">
+                            <label for="cp_dataproc">Google DataProc</label>
+                        </fieldset>
+                    </div>
+                    <div id="step-2" class="wizard">
+                        <h4 class="border-bottom border-gray pb-2">Core - Region, Stack, and VM types</h4>
+                        <fieldset>
+                            <div id="EMR_step_2" class="for_cloud_provider" style="float: left; margin: 5px;">
+                                <legend>Settings for Amazon EMR</legend>
+                                Region *:<br/>
+                                <select id="region_emr" name="region_emr">
+                                    <option value="us-east-1">US East (N. Virginia)</option>
+                                    <!--
+                                    TODO, not supported yet by VPC.
+                                    <option value="us-east-2">US East (Ohio)</option>
+                                    <option value="us-west-1">US West (N. California)</option>
+                                    <option value="us-west-2">US West (Oregon)</option>
+                                    -->
+                                </select>
+
+                                <p>Version *:<br/>
+                                <!-- TODO, we need a better way of controlling these values from the backend. -->
+                                <input type="radio" name="stack_version_emr" id="emr_latest" value="LATEST">
+                                <label for="emr_latest">EMR Latest</label>
+                                <input type="radio" name="stack_version_emr" id="emr_5_29_0" value="5.29.0">
+                                <label for="emr_5_29_0">EMR 5.29.0</label>
+                                <input type="radio" name="stack_version_emr" id="emr_5_28_1" value="5.28.1">
+                                <label for="emr_5_28_1">EMR 5.28.1</label>
+                                <input type="radio" name="stack_version_emr" id="emr_5_28_0" value="5.28.0">
+                                <label for="emr_5_28_0">EMR 5.28.0</label>
+                                <input type="radio" name="stack_version_emr" id="emr_5_27_0" value="5.27.0">
+                                <label for="emr_5_27_0">EMR 5.27.0</label>
+                                </p>
+
+                                <p>
+                                    Cluster Type *:<br/>
+                                    <select id="cluster_type_emr" name="cluster_type_emr">
+                                        <option value="DEFAULT">Default</option>
+                                    </select><br/>
+                                    Cluster Name * (alphanumeric only):<br/>
+                                    <input type="text" name="cluster_name_emr" maxlength="16" value="" size="16" class="alpha_numeric_only">{{ cluster_name_suffix }}
+                                </p>
+
+                                <p>HeadNode Type:<br/>
+                                    <select id="head_node_type_emr" name="head_node_type_emr" class="mono">
+                                        <option value="DEFAULT"   >Default</option>
+                                        <option value="r5.xlarge" >r5.xlarge  (Mem Opt.  4 vCPU,  32 GiB RAM)</option>
+                                        <option value="r5.2xlarge">r5.2xlarge (Mem Opt.  8 vCPU,  64 GiB RAM)</option>
+                                        <option value="r5.4xlarge">r5.4xlarge (Mem Opt. 16 vCPU, 128 GiB RAM)</option>
+                                        <option value="c5.xlarge" >c5.xlarge  (CPU Opt.  4 vCPU,   8 GiB RAM)</option>
+                                        <option value="c5.2xlarge">c5.2xlarge (CPU Opt.  8 vCPU,  16 GiB RAM)</option>
+                                        <option value="c5.4xlarge">c5.4xlarge (CPU Opt. 16 vCPU,  32 GiB RAM)</option>
+                                        <option value="a1.xlarge" >a1.xlarge  (Gen Opt.  4 vCPU,   8 GiB RAM)</option>
+                                        <option value="a1.2xlarge">a1.2xlarge (Gen Opt.  8 vCPU,  16 GiB RAM)</option>
+                                        <option value="a1.4xlarge">a1.4xlarge (Gen Opt. 16 vCPU,  32 GiB RAM)</option>
+                                    </select>
+                                </p>
+
+                                <p>Number of HeadNodes *: <span id="num_head_nodes_emr_slider_val">1</span><br/>
+                                    <div>
+                                        <input id="num_head_nodes_emr" name="num_head_nodes_emr"  type="text"
+                                                   data-slider-min="1" data-slider-max="3"
+                                                   data-slider-step="1" data-slider-value="1"/>
+                                    </div>
+                                </p>
+
+                                <p>WorkerNode Type:<br/>
+                                    <select id="workder_node_type_emr" name="worker_node_type_emr" class="mono">
+                                        <option value="DEFAULT"   >Default</option>
+                                        <option value="r5.xlarge" >r5.xlarge  (Mem Opt.  4 vCPU,  32 GiB RAM)</option>
+                                        <option value="r5.2xlarge">r5.2xlarge (Mem Opt.  8 vCPU,  64 GiB RAM)</option>
+                                        <option value="r5.4xlarge">r5.4xlarge (Mem Opt. 16 vCPU, 128 GiB RAM)</option>
+                                        <option value="c5.xlarge" >c5.xlarge  (CPU Opt.  4 vCPU,   8 GiB RAM)</option>
+                                        <option value="c5.2xlarge">c5.2xlarge (CPU Opt.  8 vCPU,  16 GiB RAM)</option>
+                                        <option value="c5.4xlarge">c5.4xlarge (CPU Opt. 16 vCPU,  32 GiB RAM)</option>
+                                        <option value="a1.xlarge" >a1.xlarge  (Gen Opt.  4 vCPU,   8 GiB RAM)</option>
+                                        <option value="a1.2xlarge">a1.2xlarge (Gen Opt.  8 vCPU,  16 GiB RAM)</option>
+                                        <option value="a1.4xlarge">a1.4xlarge (Gen Opt. 16 vCPU,  32 GiB RAM)</option>
+                                        <option value="i3.xlarge" >i3.xlarge  (SSD Opt.  4 vCPU,  15 GiB RAM,  475 GB)</option>
+                                        <option value="i3.2xlarge">i3.2xlarge (SSD Opt.  8 vCPU,  30 GiB RAM,  950 GB)</option>
+                                        <option value="i3.4xlarge">i3.4xlarge (SSD Opt. 16 vCPU,  61 GiB RAM, 1900 GB)</option>
+                                    </select>
+                                </p>
+
+                                <p>Number of WorkerNodes *: <span id="num_worker_nodes_emr_slider_val">1</span><br/>
+                                    <div>
+                                        <input id="num_worker_nodes_emr" name="num_worker_nodes_emr" type="text"
+                                               data-slider-min="1" data-slider-max="24"
+                                               data-slider-step="1" data-slider-value="1"/>
+                                    </div>
+                                </p>
+                            </div>
+                            <div id="HDI_step_2" class="for_cloud_provider" style="float: left; margin: 5px;">
+                                <legend>Settings for Azure HDI</legend>
+                                Region *:<br/>
+                                <select id="region_hdi" name="region_hdi">
+                                    <option value="East US">East US</option>
+                                    <option value="Central US">Central US</option>
+                                    <option value="West Central US">West Central US</option>
+                                    <option value="West US">West US</option>
+                                </select>
+
+                                <p>Version *:<br/>
+                                <input type="radio" name="stack_version_hdi" id="hdi_latest" value="LATEST">
+                                <label for="hdi_latest">HDI Latest</label>
+                                <input type="radio" name="stack_version_hdi" id="hdi_4_0" value="4.0">
+                                <label for="hdi_4_0">HDI 4.0</label>
+                                <input type="radio" name="stack_version_hdi" id="hdi_3_6" value="3.6">
+                                <label for="hdi_3_6">HDI 3.6</label>
+                                </p>
+
+                                <p>Cluster Type *: Hadoop (needs to be a dropdown for HDI)<br/>
+                                </p>
+
+                                <p>HeadNode Type:<br/>
+                                </p>
+
+                                <p>Number of HeadNodes:<br/>
+                                </p>
+
+                                <p>WorkerNode Type:<br/>
+                                </p>
+
+                                <p>Number of WorkerNodes:<br/>
+                                </p>
+                            </div>
+                        </fieldset>
+                    </div>
+                    <div id="step-3" class="wizard">
+                        <fieldset>
+                            <div id="EMR_step_3" class="for_cloud_provider" style="float: left; margin: 5px;">
+                                <p>Services *:<br/>
+
+                                    <div class="box">
+                                        <legend>Core and Data Movement</legend>
+                                        <input type="checkbox" id="services_emr_zookeeper" name="services_emr" value="ZOOKEEPER">
+                                        <label for="services_emr_zookeeper">ZooKeeper</label>
+
+                                        <input type="checkbox" id="services_emr_sqoop" name="services_emr" value="SQOOP">
+                                        <label for="services_emr_sqoop">Sqoop</label>
+                                    </div>
+
+                                    <div class="box">
+                                        <legend>Execution Engines</legend>
+                                        <input type="checkbox" id="services_emr_hive" name="services_emr" value="HIVE">
+                                        <label for="services_emr_hive">Hive</label>
+
+                                        <input type="checkbox" id="services_emr_tez" name="services_emr" value="TEZ">
+                                        <label for="services_emr_tez">Tez</label>
+
+                                        <input type="checkbox" id="services_emr_presto" name="services_emr" value="PRESTO">
+                                        <label for="services_emr_presto">Presto</label>
+                                    </div>
+
+                                    <div class="box">
+                                        <legend>Scripting</legend>
+                                        <input type="checkbox" id="services_emr_pig" name="services_pig" value="PIG">
+                                        <label for="services_emr_pig">Pig</label>
+                                    </div>
+
+                                    <div class="box">
+                                        <legend>Data Science, Streaming</legend>
+                                        <input type="checkbox" id="services_emr_spark" name="services_emr" value="SPARK">
+                                        <label for="services_emr_spark">Spark</label>
+
+                                        <input type="checkbox" id="services_emr_livy" name="services_emr" value="LIVY">
+                                        <label for="services_emr_livy">Livy</label>
+
+                                        <input type="checkbox" id="services_emr_flink" name="services_emr" value="FLINK">
+                                        <label for="services_emr_flink">Flink</label>
+                                    </div>
+
+                                    <div class="box">
+                                        <legend>Columnar Storage, Metadata</legend>
+                                        <input type="checkbox" id="services_emr_hbase" name="services_emr" value="HBASE">
+                                        <label for="services_emr_hbase">HBase</label>
+
+                                        <input type="checkbox" id="services_emr_phoenix" name="services_emr" value="PHOENIX">
+                                        <label for="services_emr_phoenix">Phoenix</label>
+
+                                        <input type="checkbox" id="services_emr_hcatalog" name="services_emr" value="HCATALOG">
+                                        <label for="services_emr_hcatalog">HCatalog</label>
+                                    </div>
+
+                                    <div class="box">
+                                        <legend>ETL</legend>
+                                        <input type="checkbox" id="services_emr_oozie" name="services_emr" value="OOZIE">
+                                        <label for="services_emr_oozie">Oozie</label>
+                                    </div>
+
+                                    <div class="box">
+                                        <legend>Visualization</legend>
+                                        <input type="checkbox" id="services_emr_zeppelin" name="services_emr" value="ZEPPELIN">
+                                        <label for="services_emr_zeppelin">Zeppelin</label>
+
+                                        <input type="checkbox" id="services_emr_jupyterhub" name="services_emr" value="JUPYTERHUB">
+                                        <label for="services_emr_jupyterhub">JupyterHub</label>
+                                    </div>
+                                </p>
+                            </div>
+                            <div id="HDI_step_3" class="for_cloud_provider" style="float: left; margin: 5px;">
+                                <legend>Services for Azure HDI</legend>
+                                <p>Services *:<br/>
+                                    <div class="box">
+                                        <legend>Core, Dependencies</legend>
+                                        <input type="checkbox" id="services_hdi_ambari" name="services_hdi" value="AMBARI">
+                                        <label for="services_hdi_ambari">Ambari</label>
+
+                                        <input type="checkbox" id="services_hdi_zookeeper" name="services_hdi" value="ZOOKEEPER">
+                                        <label for="services_hdi_zookeeper">ZooKeeper</label>
+
+                                        <input type="checkbox" id="services_hdi_hadoop" name="services_hdi" value="HADOOP">
+                                        <label for="services_hdi_hadoop">Hadoop</label>
+                                    </div>
+
+                                    <div class="box">
+                                        <legend>Execution Engines</legend>
+                                        <input type="checkbox" id="services_hdi_hive" name="services_hdi" value="HIVE">
+                                        <label for="services_emr_hive">Hive</label>
+
+                                        <input type="checkbox" id="services_hdi_tez" name="services_hdi" value="TEZ">
+                                        <label for="services_emr_tez">Tez</label>
+
+                                        <input type="checkbox" id="services_hdi_pig" name="services_hdi" value="PIG">
+                                        <label for="services_hdi_pig">Pig</label>
+                                    </div>
+
+                                    <div class="box">
+                                        <legend>Data Science, Streaming, ETL</legend>
+                                        <input type="checkbox" id="services_hdi_spark" name="services_hdi" value="SPARK">
+                                        <label for="services_hdi_spark">Spark</label>
+
+                                        <input type="checkbox" id="services_hdi_oozie" name="services_hdi" value="OOZIE">
+                                        <label for="services_hdi_oozie">Oozie</label>
+                                    </div>
+                                </p>
+                            </div>
+                        </fieldset>
+
+                    </div>
+                    <div id="step-4" class="wizard">
+                        <p>Security: Enable|Disable SSL<br/>
+                           Root Drive Size in GB: Slider from 10 GB - 1000 GB<br/>
+                           MasterNode Root Drive Size in GB: Slider from 10 GB - 1000 GB<br/>
+                           WorkerNode Root Drive Size in GB: Slider from 10 GB - 1000 GB<br/>
+                        </p>
+                    </div>
+                    <div id="step-5" class="wizard">
+                        <table id="summary" class="white-table">
+                            <thead>
+                                <tr>
+                                    <th>Setting</th>
+                                    <th>Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Rows are dynamically added in the Confirmation. -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+{% endblock %}

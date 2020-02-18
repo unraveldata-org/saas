@@ -13,9 +13,13 @@ root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(root_dir)
 
 # Local imports
-from db.models import DBRunner, TrialRequest, NodeSpec, Node
+from db.models import DBRunner, TrialRequest, NodeSpec, Node, ClusterSpec, Cluster
 from db.config import Config as DBConfig
 from cluster_lifecycle_manager.config import Config as CLMConfig
+from cluster_lifecycle_manager.models.cloud_provider.cloud_provider import CloudProvider
+from cluster_lifecycle_manager.models.cluster_spec_model import ClusterSpecModel
+from cluster_lifecycle_manager.utils import Utils
+
 
 APP_NAME = "unravel_clm"
 APPLICATION = "Cluster LifeCycle Manager"
@@ -23,36 +27,11 @@ APPLICATION = "Cluster LifeCycle Manager"
 base_path = os.path.dirname(os.path.abspath(__file__))
 
 
-class CloudProvider(object):
-    """
-    Mapping from the Cloud Provider to the default node type and storage information to use.
-    """
-    SUPPORTED_NAMES = {"EMR"}
-
-    NAME_TO_NODE_TYPE = {
-        "EMR": "r4.4xlarge"
-    }
-
-    NAME_TO_STORAGE = {
-        "EMR": "S3"
-    }
-
-
 class ClusterLifecycleManager(object):
     """
     Daemon to manage the lifecycle of nodes and Hadoop Clusters
     """
-    logger = logging.getLogger("ClusterLifecycleManager")
-    logger.setLevel(logging.INFO)
-
-    # Console handler with a higher log level
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.INFO)
-
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    ch.setFormatter(formatter)
-
-    logger.addHandler(ch)
+    logger = Utils.get_logger("ClusterLifecycleManager")
 
     LOOP_SLEEP_SECS = 10
 
@@ -133,7 +112,7 @@ class ClusterLifecycleManager(object):
         for trial in new_trials:
             num_denied = 0
             try:
-                if trial.cloud_provider not in CloudProvider.SUPPORTED_NAMES:
+                if trial.cloud_provider not in CloudProvider.NAME.ALL:
                     trial.set_state(TrialRequest.State.DENIED)
                     trial.update()
                     self.session.commit()
@@ -141,8 +120,8 @@ class ClusterLifecycleManager(object):
                     error = "Trial request {} has cloud provider {} which is not supported.".format(trial.id, trial.cloud_provider)
                     raise Exception(error)
 
-                node_type = CloudProvider.NAME_TO_NODE_TYPE[trial.cloud_provider]
-                storage_config = CloudProvider.NAME_TO_STORAGE[trial.cloud_provider]
+                node_type = "TODO"
+                storage_config = "TODO"
 
                 unravel_version = CLMConfig.UNRAVEL_VERSION_LATEST
                 unravel_tar = CLMConfig.UNRAVEL_VERSION_TO_TAR[unravel_version]
@@ -196,6 +175,38 @@ class ClusterLifecycleManager(object):
                     format(node_spec.id, node_spec, node))
             except Exception as err:
                 self.logger.error("Unable to launch Node for NodeSpec with ID {}".format(node_spec.id))
+
+        # TODO, very similar to above
+        pending_cluster_specs = ClusterSpec.get_all_pending()
+        self.logger.info("There are {} pending Cluster Specs.".format(len(pending_cluster_specs)))
+
+        for cluster_spec in pending_cluster_specs:
+            try:
+                self.logger.info("Analyzing Cluster Spec with ID {}".format(cluster_spec.id))
+
+                cluster_spec_model = ClusterSpecModel.create_from_db_cluster_spec(cluster_spec)
+                CloudProvider.resolve_spec(cluster_spec_model)
+                cluster_spec_model.validate()
+
+                # This actually instantiates the cluster on EMR/HDI/DataProc
+                # TODO, we should try to mock this if possible.
+                # id: j-2WVDA2NW2HRGP, request: 5432581b-bf55-4f91-823b-09359e080bf7
+                cluster_id, _request_id = CloudProvider.create_cluster(cluster_spec_model)
+                # cluster_id = "j-2WVDA2NW2HRGP"
+                # _request_id = "5432581b-bf55-4f91-823b-09359e080bf7"
+
+                cluster = Cluster.create_from_cluster_spec(cluster_spec)
+                cluster.cluster_id = cluster_id
+                cluster.save()
+
+                cluster_spec.set_state(ClusterSpec.State.FINISHED)
+                cluster_spec.update()
+                self.session.commit()
+
+                self.logger.info("Transitioned ClusterSpec with ID {} from pending to finished by creating a Cluster. ClusterSpec: {} has Cluster: {}".
+                    format(cluster_spec.id, cluster_spec, cluster))
+            except Exception as err:
+                self.logger.error("Unable to launch Cluster for ClusterSpec with ID {}. Error: {}".format(cluster_spec.id, err))
 
     def _monitor_nodes_and_clusters(self):
         """

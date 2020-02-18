@@ -18,22 +18,149 @@ from .helpers.constants import Conversion
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+
+    dashboards = {"Dashboards":
+        [
+            {"section": "node",
+             "type": "pie",
+             "title": "Nodes with States",
+             "description": "Group the Nodes by their states.",
+             "series_name": "Node State",
+             "legend": {
+                     "launched": {
+                         "label": "Launched",
+                         "color": "blue"
+                     },
+                     "ready": {
+                         "label": "Ready",
+                         "color": "green"
+                     },
+                     "expired": {
+                         "label": "Expired",
+                         "color": "orange"
+                     },
+                     "deleted": {
+                         "label": "Deleted",
+                         "color": "red"
+                     }
+            },
+            "data": {
+                    "launched": 1,
+                    "ready": 2,
+                    "expired": 3,
+                    "deleted": 4
+                }
+            },
+
+            {"section": "trial",
+             "type": "solidgauge",
+             "title": "Active Trials",
+             "description": "Number of Active Trials.",
+             "series_name": "Active Trials",
+             "legend": {
+                 "min_color": "#DF5353",      # red
+                 "center_color": "#DDDF0D",   # yellow
+                 "max_color": "#55BF3B"       # green
+             },
+             "data": {"min": 0, "max": 10, "value": 3}
+            },
+        ]
+    }
+    dashboard_json = json.dumps(dashboards)
+    return render_template("index.html", dashboard_json=dashboard_json)
 
 
 @app.route("/resources")
 def resources():
     nodes = manager.get_relevant_nodes()
     # Generate a dictionary from each state to the number of occurrences
-    states = [node.state for node in nodes]
-    state_counts = {s: states.count(s) for s in states}
-    return render_template("resources.html", nodes=nodes, state_counts=state_counts)
+    node_states = [node.state for node in nodes]
+    node_state_counts = {s: node_states.count(s) for s in node_states}
+
+    clusters = manager.get_relevant_clusters()
+    # Generate a dictionary from each state to the number of occurrences
+    cluster_states = [cluster.state for cluster in clusters]
+    cluster_state_counts = {s: cluster_states.count(s) for s in cluster_states}
+    return render_template("resources.html",
+                           nodes=nodes, node_state_counts=node_state_counts,
+                           clusters=clusters, cluster_state_counts=cluster_state_counts)
 
 
-@app.route("/request")
-def request():
-    return render_template("request.html")
+@app.route("/provision", methods=["GET"])
+def provision():
+    now = datetime.utcnow()
+    curr_epoch_sec = Conversion.dt_to_unix_time_sec(now)
+    cluster_name_suffix = "-{}".format(curr_epoch_sec)
+    return render_template("provision.html", cluster_name_suffix=cluster_name_suffix)
 
+# The request.html page has a form to create a cluster.
+# The parameters can be very dynamic depending on the cloud_provider
+@app.route("/create_cluster", methods=["GET"])
+def create_cluster():
+    cloud_provider = request.args.get("cloud_provider")
+    region = request.args.get("region")
+    stack_version = request.args.get("stack_version")
+    cluster_type = request.args.get("cluster_type")
+    cluster_name = request.args.get("cluster_name")
+    head_node_type = request.args.get("head_node_type")
+    num_head_nodes = request.args.get("num_head_nodes")
+    worker_node_type = request.args.get("worker_node_type")
+    num_worker_nodes = request.args.get("num_worker_nodes")
+
+    # Will be a CSV that we have to parse
+    services = request.args.get("services", "")
+
+    print("Cloud Provider: {}".format(cloud_provider))
+    print("Region: {}".format(region))
+    print("Stack Version: {}".format(stack_version))
+    print("Cluster Type: {}".format(cluster_type))
+    print("Cluster Name: {}".format(cluster_name))
+    print("Head Node Type: {}".format(head_node_type))
+    print("Num Head Nodes: {}".format(num_head_nodes))
+    print("Worker Node Type: {}".format(worker_node_type))
+    print("Num Worker Nodes: {}".format(num_worker_nodes))
+    print("Services: {}".format(services))
+
+    response = manager.insert_cluster_request(cloud_provider, region, stack_version, cluster_type, cluster_name,
+                                              head_node_type, num_head_nodes, worker_node_type, num_worker_nodes,
+                                              services)
+
+    status = response["status"]
+    object_id = response["cluster_spec_id"]
+
+    return redirect(url_for("check_request", type="cluster", id=object_id))
+
+
+'''
+Check the request to provision a node or cluster
+E.g., http://127.0.0.1:5000/check_request?type=cluster&id=1
+'''
+@app.route("/check_request", methods=["GET"])
+def check_request():
+    type = request.args.get("type")
+    object_id = request.args.get("id")
+
+    response = manager.check_resource(type, object_id)
+
+    # These should always be available
+    # TODO, add to a lightweight model
+    status = response["status"]
+    state = response["state"] if "state" in response else None
+    cloud_provider = response["cloud_provider"] if "cloud_provider" in response else None
+    date_requested = response["date_requested"] if "date_requested" in response else None
+    error_message = response["error_message"] if "error_message" in response else None
+
+    object_url = None
+
+    # Note that provision_result.html is called from 2 different routes
+    return render_template("provision_result.html", type=type,
+                           status=status,
+                           object_id=object_id,
+                           object_state=state,
+                           object_cloud_provider=cloud_provider,
+                           object_date_requested=date_requested,
+                           object_url=None,
+                           error_message=error_message)
 
 @app.route("/trials", methods=["GET"])
 @validate_params(
