@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS `node_spec` (
     ON UPDATE NO ACTION
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+-- TODO, add region
 -- -----------------------------------------------------
 -- Table `cluster_spec`
 -- -----------------------------------------------------

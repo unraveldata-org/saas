@@ -1,5 +1,107 @@
 {% extends "base.html" %}
 
+{% block scripts %}
+<script type="text/javascript">
+
+    function add_pie_chart(chart_info, id_num) {
+        // Container to insert another chart into
+        var container = $("div#node_charts");
+
+        // Unique ID for the new chart
+        var chart_id = "node_chart_" + id_num;
+
+        // TODO, make robust with default values if doesn't exist
+        var title = chart_info["title"];
+        // The description cannot contain any HTML chars
+        var description = chart_info["description"];
+        var series_name = chart_info["series_name"];
+        var legend = chart_info["legend"];
+
+        container.append("<figure class='highcharts-figure'><div id='" + chart_id + "'></div>" +
+        "<p class='highcharts-description'>" + description + "</p>"
+        );
+
+        // Populate this with name, y, and color
+        var series_data = new Array();
+
+        // State to count
+        var data_dict = chart_info["data"];
+
+        for (var key in data_dict) {
+            var slice = {
+                name: key,
+                y: data_dict[key],
+                color: legend[key]["color"]
+            }
+            series_data.push(slice);
+        }
+
+        Highcharts.chart(chart_id, {
+            chart: {
+                plotBackgroundColor: null,
+                plotBorderWidth: null,
+                plotShadow: false,
+                type: "pie"
+            },
+            title: {
+                text: title
+            },
+            tooltip: {
+                pointFormat: "{series.name}: <b>{point.percentage:.1f}%</b>"
+            },
+            accessibility: {
+                point: {
+                    valueSuffix: "%"
+                }
+            },
+            plotOptions: {
+                pie: {
+                    allowPointSelect: true,
+                    cursor: "pointer",
+                    dataLabels: {
+                        enabled: true,
+                        format: "<b>{point.name}</b>: {point.percentage:.1f} %"
+                    }
+                }
+            },
+            series: [{
+                name: series_name,
+                colorByPoint: true,
+                data: series_data
+            }]
+        });
+    }
+
+    $(document).ready(function () {
+        var dashboards_json_text = $("#dashboards_json").val();
+        var dashboards_obj = typeof dashboards_json_text != "object" ? JSON.parse(dashboards_json_text) : dashboards_json_text;
+
+
+        if ("Node" in dashboards_obj) {
+            var chart_id = 0;
+
+            dashboards_obj["Node"].forEach(chart_info => {
+                chart_id++;
+
+                var chart_type = chart_info["type"];
+
+                switch (chart_type) {
+                    case "pie":
+                        add_pie_chart(chart_info, chart_id);
+                        break;
+                    default:
+                        console.error("Unsupported chart type ", chart_type);
+                        break;
+                }
+            });
+        } else {
+            console.warn("Did not find a Nodes key for the dashboard info.");
+        }
+
+    })
+</script>
+{% endblock %}
+
 {% block content %}
     <h1 class="section-title">Home</h1>
     <div class="content">
@@ -19,5 +121,26 @@
             Rolling avg of actual lifetime (date launched <-> date deleted).<br/>
             Total time spent per state: launched to ready, ready to expired, expired to deleted.<br/>
         </p>
+
+        <div>
+            <h3>Nodes</h3>
+            <hr/>
+            <!-- Container to automatically add charts using jQuery -->
+            <div id="node_charts">
+                <!--
+                <figure class="highcharts-figure">
+                <div id="nodes_count_pie"></div>
+                <p class="highcharts-description">Pie charts are very popular for showing a compact overview.
+                </p>
+                </figure>
+                -->
+            </div>
+
+        </div>
+
+        <!-- Store the JSON object in the DOM so we jQuery can convert it from text to JSON and process charts with it. -->
+        <div style="visibility: hidden;">
+            <input type="hidden" id="dashboards_json" value="{{ dashboard_json }}" />
+        </div>
     </div>
 {% endblock %}

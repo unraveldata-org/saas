@@ -18,7 +18,42 @@ from .helpers.constants import Conversion
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+
+    dashboards = {"Node":
+        [
+            {"type": "pie",
+             "title": "Nodes with States",
+             "description": "Group the Nodes by their states.",
+             "series_name": "Node State",
+             "legend": {
+                     "launched": {
+                         "label": "Launched",
+                         "color": "blue"
+                     },
+                     "ready": {
+                         "label": "Ready",
+                         "color": "green"
+                     },
+                     "expired": {
+                         "label": "Expired",
+                         "color": "orange"
+                     },
+                     "deleted": {
+                         "label": "Deleted",
+                         "color": "red"
+                     }
+            },
+            "data": {
+                    "launched": 1,
+                    "ready": 2,
+                    "expired": 3,
+                    "deleted": 4
+            }
+            },
+        ]
+    }
+    dashboard_json = json.dumps(dashboards)
+    return render_template("index.html", dashboard_json=dashboard_json)
 
 
 @app.route("/resources")

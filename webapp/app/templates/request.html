@@ -3,5 +3,96 @@
 {% block content %}
     <h1 class="section-title">Request a Resource</h1>
     <div class="content">
+        <div class="">
+            <h4>Create a Cluster</h4>
+            <hr/>
+            <form>
+                <table>
+                    <tbody>
+                        <tr>
+                            <td>Cloud Provider:</td>
+                            <td>
+                                <fieldset>
+                                    <legend>Select a Cloud Provider</legend>
+                                    <p>
+                                    <input type="radio" name="cloud_provider" id="cp_emr" value="EMR">
+                                    <label for="cp_emr">EMR</label>
+                                    </p>
+                                    <p>
+                                    <input type="radio" name="cloud_provider" id="cp_hdi" value="HDI">
+                                    <label for="cp_hdi">HDI</label>
+                                    </p>
+                                    <p>
+                                    <input type="radio" name="cloud_provider" id="cp_dataproc" value="DATAPROC">
+                                    <label for="cp_dataproc">Dataproc</label>
+                                    </p>
+                                </fieldset>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                Region:
+                            </td>
+                            <td>
+                                <legend>Please select a region that is specific to the Cloud Provider</legend>
+                                <select id="region" name="region">
+                                    <option value="us_west">US West</option>
+                                    <option value="us_west">US West 2</option>
+                                    <option value="us_west">US Central</option>
+                                    <option value="us_east">US East</option>
+                                </select>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Operating System and JDK</td>
+                            <td>
+                                <legend>Please select an OS that is specific to the Cloud Provider</legend>
+                                <select id="os" name="os">
+                                    <option value="ubuntu_12">Ubuntu 12</option>
+                                    <option value="ubuntu_14">Ubuntu 14</option>
+                                    <option value="centos_6">CentOS 6</option>
+                                    <option value="centos_7">CentOS 7</option>
+                                    <option value="sles">SLES</option>
+                                </select>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Stack Version</td>
+                            <td>
+                                <fieldset>
+                                    <legend>Select a Stack Version</legend>
+                                    <p>
+                                    <input type="radio" name="stack_version" id="hdi_40" value="hdi_40">
+                                    <label for="hdi_40">HDI 4.0</label>
+                                    </p>
+
+                                    <p>
+                                    <input type="radio" name="stack_version" id="hdi_36" value="hdi_36">
+                                    <label for="hdi_36">HDI 3.6</label>
+                                    </p>
+
+                                    <p>
+                                    <input type="radio" name="stack_version" id="emr_latest" value="emr_latest">
+                                    <label for="emr_5_28">EMR Latest</label>
+                                    </p>
+
+                                    <p>
+                                    <input type="radio" name="stack_version" id="emr_5_28" value="emr_5_28">
+                                    <label for="emr_5_28">EMR 5.28</label>
+                                    </p>
+
+                                    <p>
+                                    <input type="radio" name="stack_version" id="emr_5_27" value="emr_5_28">
+                                    <label for="emr_5_28">EMR 5.28</label>
+                                    </p>
+
+                                </fieldset>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+            </form>
+        </div>
     </div>
 {% endblock %}
