@@ -1,10 +1,37 @@
 {% extends "base.html" %}
 {% from "macros.html" import dict_to_csv with context %}
 
+{% block scripts %}
+
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+
+<script type="text/javascript">
+
+    function manageResource(resource_type, action, resource_id) {
+        $('form#manage_resource_ttl input[name="resource_type"]').val(resource_type);
+        $('form#manage_resource_ttl input[name="action"]').val(action);
+        $('form#manage_resource_ttl input[name="resource_id"]').val(resource_id);
+
+        if (action == "extend") {
+            // TODO, show a date picker that can only have dates in the future.
+            $('form#manage_resource_ttl input[name="extra_hours"]').val(24);
+        }
+        
+        $('form#manage_resource_ttl').submit();
+    }
+
+</script>
+{% endblock %}
+
 {% block content %}
     <h1 class="section-title">Active Resources</h1>
     <div class="content">
-
+        {% if status %}
+            <strong>Status:</strong> <span class="status_{{ status }}">{{ status }}</span><br/>
+            {% if msg %}
+                <span class="status_{{ status }}">{{ msg }}</span><br/>
+            {% endif %}
+        {% endif %}
         <h4>Active and Expired Nodes</h4>
         {% if nodes %}
             <div>Totals {{ dict_to_csv(node_state_counts) }}</div>
@@ -67,7 +94,8 @@
                                 {% if node.state in ["expired", "deleted"] %}
                                     {{ node.date_expired }}
                                 {% else %}
-                                    expires in __ hours.
+                                    expires {{ cluster.ttl_hours }} hour(s) after launch date,<br/>
+                                    ({{ cluster.date_launched|add_hours(cluster.ttl_hours) }})
                                 {% endif %}
                             </td>
                             <td>
@@ -146,14 +174,15 @@
                                 {% if cluster.state in ["expired", "deleted"] %}
                                     {{ cluster.date_expired }}
                                 {% else %}
-                                    expires in __ hours.
+                                    expires {{ cluster.ttl_hours }} hour(s) after launch date,<br/>
+                                    ({{ cluster.date_launched|add_hours(cluster.ttl_hours) }})
                                 {% endif %}
                             </td>
                             <td>
                                 {% if cluster.state in ["launched", "ready" ] %}
                                     <div class="resource">
-                                        <button class="extend" type="button">Extend</button>
-                                        <button class="expire" type="button">Expire</button>
+                                        <a href="javascript:manageResource('cluster', 'extend', '{{ cluster.id }}');" class="extend">Extend</a>
+                                        <a href="javascript:manageResource('cluster', 'expire', '{{ cluster.id }}');" class="expire">Expire</a>
                                     </div>
                                 {% endif %}
                             </td>
@@ -166,4 +195,20 @@
         {% endif %}
 
     </div>
+
+    <!-- Hidden form used to manage/extend both a node/cluster. -->
+    <form id="manage_resource_ttl" name="manage_resource_ttl" action="/manage_resource" method="GET">
+        <!-- "cluster" or "node" -->
+        <input type="text" name="resource_type" value="" placeholder="resource_type">
+
+        <!-- "extend" or "expire" -->
+        <input type="text" name="action" value="" placeholder="action">
+
+        <!-- resource primary key -->
+        <input type="text" name="resource_id" value="" placeholder="resource_id">
+
+        <!-- optional, only required if extending. -->
+        <input type="text" name="extra_hours" value="0" placeholder="extra_hours">
+    </form>
+
 {% endblock %}

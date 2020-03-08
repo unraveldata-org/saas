@@ -351,6 +351,9 @@ class NodeSpec(Base):
         self.install_ondemand = install_ondemand
         self.extra = extra
         self.date_requested = datetime.utcnow()
+
+        # Current number of hours to expire after date_launched.
+        # When expiring a resource, simply set it to 0
         self.ttl_hours = ttl_hours if ttl_hours >= 0 else 0
 
         # FK may be None
@@ -591,12 +594,12 @@ class Node(Base):
 
         launched = Node.get_by_state(Node.State.LAUNCHED)
         for node in launched:
-            if Node.date_launched is not None and (node.date_launched + timedelta(hours=node.ttl_hours)) >= now:
+            if Node.date_launched is not None and (node.date_launched + timedelta(hours=node.ttl_hours)) <= now:
                 expired.append(node)
 
         ready = Node.get_by_state(Node.State.READY)
         for node in ready:
-            if node.date_ready is not None and (node.date_ready + timedelta(hours=node.ttl_hours)) >= now:
+            if node.date_ready is not None and (node.date_ready + timedelta(hours=node.ttl_hours)) <= now:
                 expired.append(node)
 
         return expired
@@ -631,6 +634,13 @@ class Node(Base):
         else:
             raise Exception("Cannot transition from state {} to {}".format(self.state, state))
 
+    def set_ttl_hours(self, ttl_hours):
+        """
+        Change the TTL hours. This is typically done to either
+        * extend (increase from current value)
+        * expire (set to 0)
+        """
+        self.ttl_hours = ttl_hours
 
 class ClusterSpec(Base):
     """
@@ -887,6 +897,9 @@ class Cluster(Base):
         self.region = region
         self.state = self.State.LAUNCHED
         self.config = config
+
+        # Current number of hours to expire after date_launched.
+        # When expiring a resource, simply set it to 0
         self.ttl_hours = ttl_hours if ttl_hours >= 0 else 0
         self.date_launched = datetime.utcnow()
 
@@ -978,12 +991,12 @@ class Cluster(Base):
 
         launched = Cluster.get_by_state(Cluster.State.LAUNCHED)
         for cluster in launched:
-            if cluster.date_launched is not None and (cluster.date_launched + timedelta(hours=cluster.ttl_hours)) >= now:
+            if cluster.date_launched is not None and (cluster.date_launched + timedelta(hours=cluster.ttl_hours)) <= now:
                 expired.append(cluster)
 
         ready = Cluster.get_by_state(Cluster.State.READY)
         for cluster in ready:
-            if cluster.date_ready is not None and (cluster.date_ready + timedelta(hours=cluster.ttl_hours)) >= now:
+            if cluster.date_ready is not None and (cluster.date_ready + timedelta(hours=cluster.ttl_hours)) <= now:
                 expired.append(cluster)
 
         return expired
@@ -1017,3 +1030,11 @@ class Cluster(Base):
                 self.date_deleted = now
         else:
             raise Exception("Cannot transition from state {} to {}".format(self.state, state))
+
+    def set_ttl_hours(self, ttl_hours):
+        """
+        Change the TTL hours. This is typically done to either
+        * extend (increase from current value)
+        * expire (set to 0)
+        """
+        self.ttl_hours = ttl_hours

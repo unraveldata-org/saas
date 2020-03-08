@@ -209,6 +209,39 @@ table.white-table tbody tr {
     font-size: 12px;
 }
 
+.resource a.extend {
+    background-color: #13f51354;
+    height: 32px;
+    width: 44px;
+    font-size: 14px;
+    border: 2px solid darkgray;
+    padding: 5px;
+    margin: 10px;
+    display: inline-block;
+    text-align: center;
+}
+
+.resource a.expire {
+    background-color: #ec4b0e3b;
+    height: 20px;
+    width: 40px;
+    font-size: 12px;
+    border: 2px solid darkgray;
+    padding: 5px;
+    margin: 10px;
+    display: inline-block;
+    text-align: center;
+}
+
+.resource a.extend:hover {
+    background-color: #C9D6DF;
+}
+
+.resource a.expire:hover {
+    background-color: #C9D6DF;
+}
+
+
 form.hidden input {
     visibility: hidden;
 }
@@ -228,4 +261,12 @@ a.toggle_debug {
     z-index: 1000;
     top: 90px;
     right: 30px;
+}
+
+span.status_success {
+    color: forestgreen;
+}
+
+span.status_error {
+    color: red;
 }

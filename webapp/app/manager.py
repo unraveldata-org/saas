@@ -205,3 +205,58 @@ class Manager(object):
             response["error_message"] = "Unable to create a ClusterSpec request. Check the logs for more details."
 
         return response
+
+    def get_resource(self, resource_type, resource_id):
+        resource = None
+        if resource_type.lower() not in ["cluster"]:
+            raise Exception("Invalid resource type: {}".format(resource_type))
+
+        if resource_id is None or resource_id < 0:
+            raise Exception("Invalid resource id: {}".format(resource_id))
+
+        if resource_type.lower() == "cluster":
+            resource = Cluster.get_by_id(resource_id)
+
+        if resource is None:
+            raise Exception("Could not find {} resource with id {}".format(resource_type, resource_id))
+
+        return resource
+
+    def change_resource_ttl(self, resource_type, resource_id, action, extra_hours):
+        """
+        Change a resource's TTL by either expiring it (setting ttl_hours to 0) or extending it by some positive value.
+        :param resource: The resource type, which is either "cluster" or "node"
+        :param resource_id: The resource ID PK.
+        :param action: Action string ("expire", "extend")
+        :param extra_hours: Optional. If extending, then extra_hours must be a positive integer.
+        :return: Return a 2-tuple of <status (str), message (str)>
+        """
+        status = "success"
+        msg = "Successfully updated resource TTL"
+
+        try:
+            resource = self.get_resource(resource_type, resource_id)
+
+            if resource is None:
+                raise Exception("Resource is None")
+
+            if action.lower() not in ["extend", "expire"]:
+                raise Exception("Invalid action value: {}, must be either 'extend' or 'expire'".format(action))
+
+            if action.lower() == "extend" and extra_hours <= 0:
+                raise Exception("When extending the lifetime, the extra hours must be a positive integer instead of {}".
+                                format(extra_hours))
+
+            if action.lower() == "expire":
+                resource.set_ttl_hours(0)
+            elif action.lower() == "extend":
+                resource.set_ttl_hours(resource.ttl_hours + extra_hours)
+
+            self.session.add(resource)
+            self.session.commit()
+        except Exception as err:
+            status = "error"
+            msg = str(err)
+            self.logger.error("Unable to {} {} resource {}'s TTL. Error: {}".format(action, resource_type, resource_id, err))
+
+        return status, msg

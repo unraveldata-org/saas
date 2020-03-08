@@ -71,7 +71,18 @@ def index():
 
 
 @app.route("/resources")
-def resources():
+@validate_params(
+    Param("status", GET, str, required=False, default=lambda: None),
+    Param("msg", GET, str, required=False, default=lambda: None)
+)
+def resources(status, msg):
+    """
+    For each type of resource (node, cluster), show a list of the available/relevant ones.
+    If got to this page via a redirect from /manage_resource, then will have a status and msg variable
+    indicating if was able to perform that action.
+    :param status: Optional, status as either "success" or "error".
+    :param msg: Optional, message to show based on the last action.
+    """
     nodes = manager.get_relevant_nodes()
     # Generate a dictionary from each state to the number of occurrences
     node_states = [node.state for node in nodes]
@@ -81,9 +92,29 @@ def resources():
     # Generate a dictionary from each state to the number of occurrences
     cluster_states = [cluster.state for cluster in clusters]
     cluster_state_counts = {s: cluster_states.count(s) for s in cluster_states}
-    return render_template("resources.html",
+    return render_template("resources.html", status=status, msg=msg,
                            nodes=nodes, node_state_counts=node_state_counts,
                            clusters=clusters, cluster_state_counts=cluster_state_counts)
+
+# http://127.0.0.1:5000/manage_resource?resource_type=cluster&resource_id=1&action=expire
+@app.route("/manage_resource", methods=["GET"])
+@validate_params(
+    Param("resource_type", GET, str, required=True),
+    Param("resource_id", GET, int, required=True),
+    Param("action", GET, str, required=True),
+    Param("extra_hours", GET, int, required=False, default=lambda: 0)
+)
+def manage_resource(resource_type, resource_id, action, extra_hours):
+    """
+    Manage a resource by either extending its TTL or expiring it with the current time.
+    :param resource_type: Resource type is either "cluster" or "node"
+    :param resource_id: Resource ID is the int primary key
+    :param action: Action is either "extend" or "expire"
+    :param extra_hours: If the action is to "extend", then this is the numbre of hours to increase the expiration time
+    from the current value.
+    """
+    status, msg = manager.change_resource_ttl(resource_type, int(resource_id), action, extra_hours)
+    return redirect(url_for("resources", status=status, msg=msg))
 
 
 @app.route("/provision", methods=["GET"])
